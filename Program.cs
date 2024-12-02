@@ -1,11 +1,24 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using MongoDB.Driver;
+using Project_A_Server.Services.Redis.Interfaces;
+using Project_A_Server.Services.Redis;
+using Project_A_Server.Services;
 using StackExchange.Redis;
+using System.Text;
+using Project_A_Server.Models.DatabaseSettings;
+using Microsoft.Extensions.Options;
+using Project_A_Server.Models;
+using Project_A_Server.Services.MongoDB.Utils;
+using Project_A_Server.Services.MongoDB;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Redis Config
+// -------------------
+// Redis Configuration
+// -------------------
 var redisConfig = builder.Configuration.GetSection("Redis");
 var redisUrl = redisConfig["Url"];
-var redisToken = Environment.GetEnvironmentVariable("UPSTASH_REDIS_TOKEN");
+var redisToken = builder.Configuration["UPSTASH_REDIS_TOKEN"];
 
 if (string.IsNullOrEmpty(redisToken))
 {
@@ -23,37 +36,144 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     };
 
     return ConnectionMultiplexer.Connect(configuration);
+}).AddSingleton<RedisService>();
+
+// -----------------------------
+// Register MongoDB Dependencies
+// -----------------------------
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var dBSettings = builder.Configuration.GetSection("ProjectADatabase").Get<DBSettings>();
+    if (string.IsNullOrEmpty(dBSettings.ConnectionString))
+    {
+        throw new Exception("ProjectA Database ConnectionString is not configured.");
+    }
+
+    return new MongoClient(dBSettings.ConnectionString);
 });
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
+builder.Services.AddSingleton<IUserService, UserService>();
+builder.Services.AddSingleton<ISessionService, SessionService>();
+
+// -----------------
+// JWT Authentication
+// -----------------
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY"); ;
+
+        if (string.IsNullOrEmpty(secretKey))
+        {
+            throw new Exception("JWT SecretKey is not configured.");
+        }
+
+        if (string.IsNullOrEmpty(secretKey) || secretKey.Length < 32)
+        {
+            throw new Exception("JWT SecretKey must be at least 32 characters long.");
+        }
+
+
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+        };
+    });
+
+// -----------------------------
+// Configure Database Settings
+// -----------------------------
+builder.Services.Configure<DBSettings>(
+    builder.Configuration.GetSection("ProjectADatabase"));
+
+// -----------------------------
+// Register MongoDB Collections
+// -----------------------------
+// Users
+builder.Services.AddSingleton(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
+    var client = sp.GetRequiredService<IMongoClient>();
+    var database = client.GetDatabase(settings.DatabaseName);
+    return database.GetCollection<User>(settings.UsersCollectionName);
+});
+
+// Meetings
+builder.Services.AddSingleton(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
+    var client = sp.GetRequiredService<IMongoClient>();
+    var database = client.GetDatabase(settings.DatabaseName);
+    return database.GetCollection<Meeting>(settings.MeetingsCollectionName);
+});
+
+// Attendees
+builder.Services.AddSingleton(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
+    var client = sp.GetRequiredService<IMongoClient>();
+    var database = client.GetDatabase(settings.DatabaseName);
+    return database.GetCollection<Attendees>(settings.AttendeesCollectionName);
+});
+
+// UserMeetings
+builder.Services.AddSingleton(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
+    var client = sp.GetRequiredService<IMongoClient>();
+    var database = client.GetDatabase(settings.DatabaseName);
+    return database.GetCollection<UserMeetings>(settings.UserMeetingsCollectionName);
+});
+
+// -----------------
+// Register Services
+// -----------------
+builder.Services.AddSingleton<UserService>();
+builder.Services.AddSingleton<MeetingsService>();
+builder.Services.AddSingleton<AttendeesService>();
+builder.Services.AddSingleton<UserMeetingsService>();
+builder.Services.AddSingleton<UnregisterUsers>();
+
+// ------------------
+// Add CORS and Swagger
+// ------------------
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
-app.MapGet("/redis-test", async (IConnectionMultiplexer redis) =>
-{
-    var db = redis.GetDatabase();
-
-    // Set a value
-    await db.StringSetAsync("foo", "bar");
-
-    // Get the value
-    var value = await db.StringGetAsync("foo");
-    return Results.Ok(new { Key = "foo", Value = value.ToString() });
-});
-
-
-// Configure the HTTP request pipeline.
+// -----------------
+// Configure Middleware
+// -----------------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseCors(MyAllowSpecificOrigins);
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
