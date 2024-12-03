@@ -43,7 +43,7 @@ namespace Project_A_Server.Controllers
         public async Task<List<Attendees>> GetUserMeetings() =>
             await _attendeesService.GetAsync();
 
-        //[Authorize]
+        [Authorize]
         [HttpPost("meeting")]
         public async Task<IActionResult> Post([FromBody] Meeting newMeeting)
         {
