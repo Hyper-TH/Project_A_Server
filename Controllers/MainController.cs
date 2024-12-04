@@ -71,9 +71,14 @@ namespace Project_A_Server.Controllers
                 while (true);
 
                 newMeeting.mID = mID;
+                var newAttendees = new Attendees
+                {
+                    Id = newMeeting.mID,
+                    Users = Array.Empty<string>()
+                };
 
                 await _meetingsService.CreateAsync(newMeeting);
-                // await _attendeesService.CreateAsync(newMeeting);
+                await _attendeesService.CreateAsync(newAttendees);
                 await _userMeetingsService.AddMeetingAsync(newMeeting.Organizer, newMeeting.mID);
                 await _cache.CacheIDAsync(newMeeting.mID, newMeeting.Id);
 
