@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using MongoDB.Bson;
 using Project_A_Server.Models;
 using Project_A_Server.Models.DatabaseSettings;
 
@@ -21,11 +22,11 @@ namespace Project_A_Server.Services.MongoDB
                 dbSettings.Value.MeetingsCollectionName);
         }
 
-        public async Task<List<Meeting>> GetAsync() =>
+        public async Task<List<Meeting>> GetALlAsync() =>
             await _meetingsCollection.Find(_ => true).ToListAsync();
-
-        public async Task<Meeting?> GetAsync(string mid) =>
-            await _meetingsCollection.Find(x => x.mID == mid).FirstOrDefaultAsync();
+        
+        public async Task<Meeting?> GetAsync(string id) =>
+            await _meetingsCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
 
         public async Task<Meeting?> GetByMIDAsync(string mid) =>
             await _meetingsCollection.Find(Meeting => Meeting.mID == mid).FirstOrDefaultAsync();

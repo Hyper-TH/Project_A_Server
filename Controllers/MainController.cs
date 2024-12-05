@@ -5,6 +5,7 @@ using Project_A_Server.Services.MongoDB.Utils;
 using Project_A_Server.Services.MongoDB;
 using Project_A_Server.Services.Redis;
 using Project_A_Server.Services;
+using System.Security.Cryptography;
 
 namespace Project_A_Server.Controllers
 {
@@ -31,65 +32,95 @@ namespace Project_A_Server.Controllers
             _cache = redisService;
         }
 
-        [HttpGet("meetings")]
-        public async Task<List<Meeting>> GetMeetings() =>
-            await _meetingsService.GetAsync();
-
-        [HttpGet("attendees")]
-        public async Task<List<Attendees>> GetAttendees() =>
-            await _attendeesService.GetAsync();
-
-        [HttpGet("usermeetings")]
-        public async Task<List<Attendees>> GetUserMeetings() =>
-            await _attendeesService.GetAsync();
-
-        [Authorize]
-        [HttpPost("meeting")]
-        public async Task<IActionResult> Post([FromBody] Meeting newMeeting)
+        [HttpGet("meeting/{mid}")]
+        public async Task<IActionResult> GetMeeting(string mid)
         {
-            if (newMeeting == null)
+            if (string.IsNullOrEmpty(mid))
             {
-                return BadRequest("Invalid meeting data");
+                return BadRequest("Meeting ID cannot be null or empty.");
             }
 
             try
             {
-                string mID;
-                do
+                var cachedDocId = await _cache.GetCachedDocIdAsync(mid);
+                if (string.IsNullOrEmpty(cachedDocId))
                 {
-                    mID = Guid.NewGuid().ToString("N");
-                    var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
-
-                    if (string.IsNullOrEmpty(cachedDocId))
-                    {
-                        newMeeting.mID = mID;
-                        break;
-                    }
-
-                    Console.WriteLine($"Collision detected for mID: {mID}. Generating a new one.");
+                    return Conflict(new { Message = $"ID {mid} does not exist." });
                 }
-                while (true);
 
-                newMeeting.mID = mID;
-                var newAttendees = new Attendees
+                var meeting = await _meetingsService.GetAsync(cachedDocId);
+
+                if (meeting == null)
                 {
-                    Id = newMeeting.mID,
-                    Users = Array.Empty<string>()
-                };
+                    return NotFound($"Meeting with ID '{mid}' was not found.");
+                }
 
-                await _meetingsService.CreateAsync(newMeeting);
-                await _attendeesService.CreateAsync(newAttendees);
-                await _userMeetingsService.AddMeetingAsync(newMeeting.Organizer, newMeeting.mID);
-                await _cache.CacheIDAsync(newMeeting.mID, newMeeting.Id);
-
-                return CreatedAtAction(nameof(GetMeetings), new { mID = newMeeting.mID }, newMeeting);
+                return Ok(meeting);
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Error creating Meeting: {ex.Message}", ex);
+                Console.Error.WriteLine($"Error retrieving Meeting: {ex.Message}\n{ex.StackTrace}");
 
                 return StatusCode(StatusCodes.Status500InternalServerError,
-                    new { Message = "An error occured while creating the meeting." });
+                    new { Message = "An error occurred while retrieving the meeting." });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("meetings/{uid}")]
+        public async Task<IActionResult> GetUserMeetings(string uid)
+        {
+            if (string.IsNullOrEmpty(uid))
+            {
+                return BadRequest("User ID cannot be null or empty.");
+            }
+
+            try
+            {
+                var userMeetings = await _userMeetingsService.GetAsync(uid);
+
+                if (userMeetings == null)
+                {
+                    return NotFound($"User with ID '{uid}' was not found.");
+                }
+
+                var meetingDetails = new List<Meeting>(); 
+
+                foreach (var mid in userMeetings.Meetings)
+                {
+                    try
+                    {
+                        var cachedDocId = await _cache.GetCachedDocIdAsync(mid);
+                        if (string.IsNullOrEmpty(cachedDocId))
+                        {
+                            Console.WriteLine($"Meeting ID '{mid}' does not exist in Redis.");
+                            continue; // Skip this meeting if no docID is found
+                        }
+
+                        var meeting = await _meetingsService.GetAsync(cachedDocId);
+                        if (meeting != null)
+                        {
+                            meetingDetails.Add(meeting); 
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Meeting with docID '{cachedDocId}' not found in MongoDB.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Error processing Meeting ID '{mid}': {ex.Message}\n{ex.StackTrace}");
+                    }
+                }
+
+                return Ok(meetingDetails);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error retrieving User's Meetings: {ex.Message}\n{ex.StackTrace}");
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { Message = "An error occurred while retrieving the meetings." });
             }
         }
 
@@ -142,6 +173,56 @@ namespace Project_A_Server.Controllers
 
                 return StatusCode(StatusCodes.Status500InternalServerError,
                     new { Message = "An error occured while unregistering the meeting." });
+            }
+        }
+
+        [Authorize]
+        [HttpPost("meeting")]
+        public async Task<IActionResult> Post([FromBody] Meeting newMeeting)
+        {
+            if (newMeeting == null)
+            {
+                return BadRequest("Invalid meeting data");
+            }
+
+            try
+            {
+                string mID;
+                do
+                {
+                    mID = Guid.NewGuid().ToString("N");
+                    var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
+
+                    if (string.IsNullOrEmpty(cachedDocId))
+                    {
+                        newMeeting.mID = mID;
+                        break;
+                    }
+
+                    Console.WriteLine($"Collision detected for mID: {mID}. Generating a new one.");
+                }
+                while (true);
+
+                newMeeting.mID = mID;
+                var newAttendees = new Attendees
+                {
+                    Id = newMeeting.mID,
+                    Users = Array.Empty<string>()
+                };
+
+                await _meetingsService.CreateAsync(newMeeting);
+                await _attendeesService.CreateAsync(newAttendees);
+                await _userMeetingsService.AddMeetingAsync(newMeeting.Organizer, newMeeting.mID);
+                await _cache.CacheIDAsync(newMeeting.mID, newMeeting.Id);
+
+                return CreatedAtAction(nameof(GetMeeting), new { mID = newMeeting.mID }, newMeeting);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error creating Meeting: {ex.Message}", ex);
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { Message = "An error occured while creating the meeting." });
             }
         }
 
