@@ -7,6 +7,8 @@ using Project_A_Server.Services.Redis;
 using Project_A_Server.Services;
 using System.Security.Cryptography;
 
+// TODO: Change logic by taking in the entire document and updating it
+// instead of directly updating the resource
 namespace Project_A_Server.Controllers
 {
     [ApiController]
@@ -151,7 +153,7 @@ namespace Project_A_Server.Controllers
         }
 
         [Authorize]
-        [HttpDelete("unregister/{uID}/{mID}")]
+        [HttpPut("unregister/{uID}/{mID}")]
         public async Task<IActionResult> Unregister(string uID, string mID)
         {
             try
