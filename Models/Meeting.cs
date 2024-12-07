@@ -15,7 +15,10 @@ namespace Project_A_Server.Models
         public string Name { get; set; } = null!;
         public string Organizer { get; set; } = null!;
         public string Description { get; set; } = null!;
-        public string Date { get; set; } = null!; // Store only the date part (time will default to 00:00:00)
+
+        [BsonElement("DateTime")]
+        [BsonDateTimeOptions(Kind = DateTimeKind.Utc)] 
+        public DateTime DateTime { get; set; }
         public string Timezone { get; set; } = null!;
     }
 }
