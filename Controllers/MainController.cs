@@ -229,8 +229,7 @@ namespace Project_A_Server.Controllers
         }
 
         [Authorize]
-        // If the user is NOT the organizer, invoke the RemoveMeeting from UserMeetingsService AND update AttendeesService
-        [HttpDelete("{uID}/{mID}")]
+        [HttpDelete("meeting/{uID}/{mID}")]
         public async Task<IActionResult> DeleteMeeting(string uID, string mID)
         {
             try
