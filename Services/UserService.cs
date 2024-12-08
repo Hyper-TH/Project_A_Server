@@ -1,12 +1,13 @@
-﻿using Project_A_Server.Services.MongoDB;
-using Project_A_Server.Services.Redis.Interfaces;
-using Project_A_Server.Models;
+﻿using Project_A_Server.Models;
+using Project_A_Server.Models.Meetings;
 using Project_A_Server.Services.Redis;
 using MongoDB.Driver;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using Project_A_Server.Services.MongoDB.Meetings;
+using Project_A_Server.Interfaces;
 
 namespace Project_A_Server.Services
 {

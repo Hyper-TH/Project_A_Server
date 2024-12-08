@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MongoDB.Driver;
-using Project_A_Server.Services.Redis.Interfaces;
 using Project_A_Server.Services.Redis;
 using Project_A_Server.Services;
 using StackExchange.Redis;
@@ -9,7 +8,10 @@ using Project_A_Server.Models.DatabaseSettings;
 using Microsoft.Extensions.Options;
 using Project_A_Server.Models;
 using Project_A_Server.Services.MongoDB.Utils;
-using Project_A_Server.Services.MongoDB;
+using Project_A_Server.Models.Meetings;
+using Project_A_Server.Services.MongoDB.Meetings;
+using Project_A_Server.Interfaces;
+using Project_A_Server.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,8 +55,8 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
 });
 
 
-builder.Services.AddSingleton<IUserService, UserService>();
-builder.Services.AddSingleton<ISessionService, SessionService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
 
 // -----------------
 // JWT Authentication
@@ -97,7 +99,7 @@ builder.Services.Configure<DBSettings>(
 // Register MongoDB Collections
 // -----------------------------
 // Users
-builder.Services.AddSingleton(sp =>
+builder.Services.AddScoped(sp =>
 {
     var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
     var client = sp.GetRequiredService<IMongoClient>();
@@ -106,7 +108,7 @@ builder.Services.AddSingleton(sp =>
 });
 
 // Meetings
-builder.Services.AddSingleton(sp =>
+builder.Services.AddScoped(sp =>
 {
     var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
     var client = sp.GetRequiredService<IMongoClient>();
@@ -115,7 +117,7 @@ builder.Services.AddSingleton(sp =>
 });
 
 // Attendees
-builder.Services.AddSingleton(sp =>
+builder.Services.AddScoped(sp =>
 {
     var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
     var client = sp.GetRequiredService<IMongoClient>();
@@ -124,7 +126,7 @@ builder.Services.AddSingleton(sp =>
 });
 
 // UserMeetings
-builder.Services.AddSingleton(sp =>
+builder.Services.AddScoped(sp =>
 {
     var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
     var client = sp.GetRequiredService<IMongoClient>();
@@ -132,14 +134,20 @@ builder.Services.AddSingleton(sp =>
     return database.GetCollection<UserMeetings>(settings.UserMeetingsCollectionName);
 });
 
+
+// -----------------------------
+// Register Generic Repositories
+// -----------------------------
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+
 // -----------------
 // Register Services
 // -----------------
-builder.Services.AddSingleton<UserService>();
-builder.Services.AddSingleton<MeetingsService>();
-builder.Services.AddSingleton<AttendeesService>();
-builder.Services.AddSingleton<UserMeetingsService>();
-builder.Services.AddSingleton<UnregisterUsers>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<MeetingsService>();
+builder.Services.AddScoped<AttendeesService>();
+builder.Services.AddScoped<UserMeetingsService>();
+builder.Services.AddScoped<UnregisterUsers>();
 
 // ------------------
 // Add CORS and Swagger

@@ -1,6 +1,6 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 
-namespace Project_A_Server.Models
+namespace Project_A_Server.Models.Meetings
 {
     public class UserMeetings
     {

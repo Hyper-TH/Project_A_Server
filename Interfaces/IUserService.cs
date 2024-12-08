@@ -1,6 +1,6 @@
 ﻿using Project_A_Server.Models;
 
-namespace Project_A_Server.Services.Redis.Interfaces
+namespace Project_A_Server.Interfaces
 {
     public interface IUserService
     {

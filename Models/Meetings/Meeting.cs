@@ -2,7 +2,7 @@
 using MongoDB.Bson;
 using System.Text.Json.Serialization;
 
-namespace Project_A_Server.Models
+namespace Project_A_Server.Models.Meetings
 {
     public class Meeting
     {
@@ -17,7 +17,7 @@ namespace Project_A_Server.Models
         public string Description { get; set; } = null!;
 
         [BsonElement("DateTime")]
-        [BsonDateTimeOptions(Kind = DateTimeKind.Utc)] 
+        [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
         public DateTime DateTime { get; set; }
         public string Timezone { get; set; } = null!;
     }

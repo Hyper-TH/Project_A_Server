@@ -2,10 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Project_A_Server.Models;
 using Project_A_Server.Services.MongoDB.Utils;
-using Project_A_Server.Services.MongoDB;
 using Project_A_Server.Services.Redis;
 using Project_A_Server.Services;
 using System.Security.Cryptography;
+using Project_A_Server.Models.Meetings;
+using Project_A_Server.Services.MongoDB.Meetings;
 
 // TODO: Change logic by taking in the entire document and updating it
 // instead of directly updating the resource
@@ -15,18 +16,16 @@ namespace Project_A_Server.Controllers
     [Route("api/[controller]")]
     public class MainController : ControllerBase
     {
-        private readonly UserService _usersService;
         private readonly MeetingsService _meetingsService;
         private readonly AttendeesService _attendeesService;
         private readonly UserMeetingsService _userMeetingsService;
         private readonly UnregisterUsers _unregisterUsers;
         private readonly RedisService _cache;
 
-        public MainController(UserService usersService, MeetingsService meetingsService,
+        public MainController(MeetingsService meetingsService,
                                     AttendeesService attendeesService, UserMeetingsService userMeetings,
                                     UnregisterUsers unregisterUsers, RedisService redisService)
         {
-            _usersService = usersService;
             _meetingsService = meetingsService;
             _attendeesService = attendeesService;
             _userMeetingsService = userMeetings;
@@ -79,7 +78,7 @@ namespace Project_A_Server.Controllers
 
             try
             {
-                var userMeetings = await _userMeetingsService.GetAsync(uid);
+                var userMeetings = await _userMeetingsService.GetByUIDAsync(uid);
 
                 if (userMeetings == null)
                 {
@@ -165,7 +164,7 @@ namespace Project_A_Server.Controllers
                 }
 
                 await _userMeetingsService.RemoveMeetingAsync(uID, mID);
-                await _attendeesService.RemoveOneAsync(uID, mID);
+                await _attendeesService.RemoveUserFromMeetingAsync(uID, mID);
 
                 return Ok(new { Message = "Unregistered meeting successfully" });
             }

@@ -1,6 +1,6 @@
-﻿using Project_A_Server.Services.Redis.Interfaces;
-using Project_A_Server.Models;
+﻿using Project_A_Server.Models;
 using StackExchange.Redis;
+using Project_A_Server.Interfaces;
 
 namespace Project_A_Server.Services.Redis
 {

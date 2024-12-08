@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Project_A_Server.Interfaces;
 using Project_A_Server.Models.Auth;
-using Project_A_Server.Services.Redis.Interfaces;
 
 namespace Project_A_Server.Controllers
 {
