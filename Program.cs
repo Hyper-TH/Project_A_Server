@@ -12,6 +12,8 @@ using Project_A_Server.Models.Meetings;
 using Project_A_Server.Services.MongoDB.Meetings;
 using Project_A_Server.Interfaces;
 using Project_A_Server.Repositories;
+using Project_A_Server.Models.Availabilities;
+using Project_A_Server.Services.MongoDB.Availabilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,7 +55,6 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
 
     return new MongoClient(dBSettings.ConnectionString);
 });
-
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -134,6 +135,15 @@ builder.Services.AddScoped(sp =>
     return database.GetCollection<UserMeetings>(settings.UserMeetingsCollectionName);
 });
 
+// UserAvailabilities
+builder.Services.AddScoped(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
+    var client = sp.GetRequiredService<IMongoClient>();
+    var database = client.GetDatabase(settings.DatabaseName);
+    return database.GetCollection<UserAvailabilities>(settings.UserAvailabilitiesCollectionName);
+});
+
 
 // -----------------------------
 // Register Generic Repositories
@@ -148,6 +158,7 @@ builder.Services.AddScoped<MeetingsService>();
 builder.Services.AddScoped<AttendeesService>();
 builder.Services.AddScoped<UserMeetingsService>();
 builder.Services.AddScoped<UnregisterUsers>();
+builder.Services.AddScoped<UserAvailabilitiesService>();
 
 // ------------------
 // Add CORS and Swagger

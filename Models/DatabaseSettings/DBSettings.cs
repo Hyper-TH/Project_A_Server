@@ -8,5 +8,6 @@
         public string MeetingsCollectionName { get; set; } = null!;
         public string AttendeesCollectionName { get; set; } = null!;
         public string UserMeetingsCollectionName { get; set; } = null!;
+        public string UserAvailabilitiesCollectionName { get; set; } = null!;
     }
 }
