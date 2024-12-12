@@ -135,6 +135,15 @@ builder.Services.AddScoped(sp =>
     return database.GetCollection<UserMeetings>(settings.UserMeetingsCollectionName);
 });
 
+// Availabilities
+builder.Services.AddScoped(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
+    var client = sp.GetRequiredService<IMongoClient>();
+    var database = client.GetDatabase(settings.DatabaseName);
+    return database.GetCollection<Availability>(settings.AvailabilitiesCollectionName);
+});
+
 // UserAvailabilities
 builder.Services.AddScoped(sp =>
 {
@@ -159,6 +168,7 @@ builder.Services.AddScoped<AttendeesService>();
 builder.Services.AddScoped<UserMeetingsService>();
 builder.Services.AddScoped<UnregisterUsers>();
 builder.Services.AddScoped<UserAvailabilitiesService>();
+builder.Services.AddScoped<AvailabilitiesService>();
 
 // ------------------
 // Add CORS and Swagger

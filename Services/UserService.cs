@@ -7,7 +7,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
 using Project_A_Server.Services.MongoDB.Meetings;
+using Project_A_Server.Services.MongoDB.Availabilities;
 using Project_A_Server.Interfaces;
+using Project_A_Server.Models.Availabilities;
 
 namespace Project_A_Server.Services
 {
@@ -15,14 +17,19 @@ namespace Project_A_Server.Services
     {
         private readonly IMongoCollection<User> _users;
         private readonly UserMeetingsService _userMeetings;
+        private readonly UserAvailabilitiesService _userAvailabilities;
         private readonly IConfiguration _configuration;
         private readonly RedisService _cache;
 
-        public UserService(IMongoClient mongoClient, IConfiguration configuration, UserMeetingsService userMeetingsService, RedisService projectARedisService)
+        public UserService(
+            IMongoClient mongoClient, IConfiguration configuration, 
+            UserMeetingsService userMeetingsService, UserAvailabilitiesService userAvailabilities,
+            RedisService projectARedisService)
         {
             var database = mongoClient.GetDatabase("ProjectA");
             _users = database.GetCollection<User>("Users");
             _userMeetings = userMeetingsService;
+            _userAvailabilities = userAvailabilities;
             _configuration = configuration;
             _cache = projectARedisService;
         }
@@ -54,7 +61,14 @@ namespace Project_A_Server.Services
                 Meetings = Array.Empty<string>()
             };
 
+            var userAvailabilities = new UserAvailabilities
+            {
+                UID = user.UID,
+                Availabilities= Array.Empty<string>()
+            };
+
             await _userMeetings.CreateAsync(userMeetings);
+            await _userAvailabilities.CreateAsync(userAvailabilities);
         }
 
         public string GenerateJwtToken(User user)

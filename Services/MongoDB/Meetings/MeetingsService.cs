@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Bson;
-using Project_A_Server.Models.DatabaseSettings;
 using Project_A_Server.Models.Meetings;
 using Project_A_Server.Interfaces;
 
