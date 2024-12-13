@@ -153,6 +153,16 @@ builder.Services.AddScoped(sp =>
     return database.GetCollection<UserAvailabilities>(settings.UserAvailabilitiesCollectionName);
 });
 
+// Groups
+builder.Services.AddScoped(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
+    var client = sp.GetRequiredService<IMongoClient>();
+    var database = client.GetDatabase(settings.DatabaseName);
+    return database.GetCollection<Group>(settings.GroupsCollectionName);
+});
+
+
 
 // -----------------------------
 // Register Generic Repositories
@@ -169,6 +179,7 @@ builder.Services.AddScoped<UserMeetingsService>();
 builder.Services.AddScoped<UnregisterUsers>();
 builder.Services.AddScoped<UserAvailabilitiesService>();
 builder.Services.AddScoped<AvailabilitiesService>();
+builder.Services.AddScoped<GroupsService>();
 
 // ------------------
 // Add CORS and Swagger
