@@ -8,10 +8,20 @@ namespace Project_A_Server.Models.Availabilities
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
         public string? Id { get; set; }
+
+        [BsonElement("gID")]
         public string? gID { get; set; }
+
+        [BsonElement("Name")]
         public string Name { get; set; } = null!;
+
+        [BsonElement("Organizer")]
         public string Organizer { get; set; } = null!;
-        public string Description { get; set; }
-        public string[] Users { get; set; }
+
+        [BsonElement("Description")]
+        public string Description { get; set; } = "";
+
+        [BsonElement("Users")]
+        public string[] Users { get; set; } = [];
     }
 }

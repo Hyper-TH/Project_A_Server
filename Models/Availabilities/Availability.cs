@@ -8,12 +8,26 @@ namespace Project_A_Server.Models.Availabilities
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
         public string? Id { get; set; }
+
+        [BsonElement("aID")]
         public string? aID { get; set; }
-        public string? uID { get; set; }
+
+        [BsonElement("UID")]
+        public string? UID { get; set; }
+
+        [BsonElement("gID")]
+        public string? gID { get; set; }
+
         [BsonElement("DateTime")]
-        public DateTime? Date { get; set; }
-        public string? StartTime { get; set; }
-        public string? EndTime { get; set; }
-        public string? Timezone { get; set; }
+        public DateTime Date { get; set; }
+
+        [BsonElement("StartTime")]
+        public string StartTime { get; set; } = null!;
+
+        [BsonElement("EndTime")]
+        public string EndTime { get; set; } = null!;
+
+        [BsonElement("Timezone")]
+        public string Timezone { get; set; } = null!;
     }
 }

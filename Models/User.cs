@@ -22,6 +22,6 @@ namespace Project_A_Server.Models
         public string PasswordHash { get; set; } = null!;
 
         [BsonElement("Location")]
-        public string Location { get; set; }
+        public string Location { get; set; } = "";
     }
 }

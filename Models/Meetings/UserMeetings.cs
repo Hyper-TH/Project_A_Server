@@ -5,7 +5,10 @@ namespace Project_A_Server.Models.Meetings
     public class UserMeetings
     {
         [BsonId]
+        [BsonElement("UID")]
         public string? UID { get; set; } = null!;
-        public string[] Meetings { get; set; }
+
+        [BsonElement("Meetings")]
+        public string[] Meetings { get; set; } = [];
     }
 }
