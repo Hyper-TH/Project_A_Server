@@ -7,6 +7,7 @@ using Project_A_Server.Services;
 using System.Security.Cryptography;
 using Project_A_Server.Models.Meetings;
 using Project_A_Server.Services.MongoDB.Meetings;
+using Project_A_Server.Services.MongoDB.Availabilities;
 
 // TODO: Change logic by taking in the entire document and updating it
 // instead of directly updating the resource
@@ -207,16 +208,22 @@ namespace Project_A_Server.Controllers
                 newMeeting.mID = mID;
                 var newAttendees = new Attendees
                 {
-                    Id = newMeeting.mID,
+                    mID = newMeeting.mID,
                     Users = Array.Empty<string>()
                 };
 
                 await _meetingsService.CreateAsync(newMeeting);
                 await _attendeesService.CreateAsync(newAttendees);
                 await _userMeetingsService.AddMeetingAsync(newMeeting.Organizer, newMeeting.mID);
-                await _cache.CacheIDAsync(newMeeting.mID, newMeeting.Id);
 
-                return CreatedAtAction(nameof(GetMeeting), new { mID = newMeeting.mID }, newMeeting);
+                var insertedMeeting = await _meetingsService.GetAsync(mID);
+                if (insertedMeeting?.Id == null)
+                {
+                    throw new InvalidOperationException("Failed to retrieve meeting ID after insertion.");
+                }
+                await _cache.CacheIDAsync(mID, insertedMeeting.Id);
+
+                return CreatedAtAction(nameof(GetMeeting), new { newMeeting.mID }, newMeeting);
             }
             catch (Exception ex)
             {

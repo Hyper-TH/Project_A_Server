@@ -87,9 +87,15 @@ namespace Project_A_Server.Controllers
                 newGroup.gID = gID;
 
                 await _groupsService.CreateAsync(newGroup);
-                await _cache.CacheIDAsync(newGroup.gID, newGroup.Id);
 
-                return CreatedAtAction(nameof(GetGroup), new { gID = newGroup.gID }, newGroup);
+                var insertedGroup = await _groupsService.GetAsync(newGroup.gID);
+                if (insertedGroup?.Id == null)
+                {
+                    throw new InvalidOperationException("Failed to retrieve group ID after insertion.");
+                }
+                await _cache.CacheIDAsync(gID, insertedGroup.Id);
+
+                return CreatedAtAction(nameof(GetGroup), new { newGroup.gID }, newGroup);
             }
             catch (Exception ex)
             {
@@ -221,10 +227,17 @@ namespace Project_A_Server.Controllers
                 newAvailability.aID = aID;
 
                 await _availabilitiesService.CreateAsync(newAvailability);
-                await _userAvailabilitiesService.AddAvailabilityAsync(newAvailability.uID, newAvailability.aID);
-                await _cache.CacheIDAsync(newAvailability.aID, newAvailability.Id);
+                await _userAvailabilitiesService.AddAvailabilityAsync(newAvailability.UID ?? throw new InvalidOperationException("Availability UID is null"),
+                    newAvailability.aID ?? throw new InvalidOperationException("Availability ID is null"));
 
-                return CreatedAtAction(nameof(GetAvailability), new { aID = newAvailability.aID }, newAvailability);
+                var insertedAvailability = await _groupsService.GetAsync(aID);
+                if (insertedAvailability?.Id == null)
+                {
+                    throw new InvalidOperationException("Failed to retrieve group ID after insertion.");
+                }
+                await _cache.CacheIDAsync(aID, insertedAvailability.Id);
+
+                return CreatedAtAction(nameof(GetAvailability), new { newAvailability.aID }, newAvailability);
             }
             catch (Exception ex)
             {

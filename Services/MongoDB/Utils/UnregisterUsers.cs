@@ -40,7 +40,7 @@ namespace Project_A_Server.Services.MongoDB.Utils
                 await _attendeesService.RemoveAsync(mID);
 
                 var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
-                await _meetingsService.RemoveAsync(cachedDocId);    
+                await _meetingsService.RemoveAsync(cachedDocId ?? throw new InvalidOperationException("Doc ID is null"));
 
                 return;
             }

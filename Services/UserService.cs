@@ -36,8 +36,10 @@ namespace Project_A_Server.Services
 
         public async Task<User> GetUserByUsernameAsync(string username)
         {
-            return await _users.Find(u => u.Username == username).FirstOrDefaultAsync();
+            var user = await _users.Find(u => u.Username == username).FirstOrDefaultAsync();
+            return user ?? throw new InvalidOperationException($"User with username '{username}' not found.");
         }
+
         public async Task<User?> GetUserByUidAsync(string uid)
         {
             return await _users.Find(u => u.UID == uid).FirstOrDefaultAsync();
@@ -53,7 +55,13 @@ namespace Project_A_Server.Services
             };
 
             await _users.InsertOneAsync(user);
-            await _cache.CacheIDAsync(user.UID, user.Id);
+            var newUser = await _users.Find(u => u.UID == user.UID).FirstOrDefaultAsync();
+            if (newUser?.Id == null)
+            {
+                throw new InvalidOperationException("Failed to retrieve user ID after insertion.");
+
+            }
+            await _cache.CacheIDAsync(newUser.UID, newUser.Id);  
 
             var userMeetings = new UserMeetings
             {
@@ -73,13 +81,19 @@ namespace Project_A_Server.Services
 
         public string GenerateJwtToken(User user)
         {
-            var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY"); ;
+            var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+
+            if (string.IsNullOrEmpty(secretKey))
+            {
+                throw new InvalidOperationException("JWT secret key is not set in the environment variables.");
+            }
+
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Username),
                 new Claim("uid", user.UID),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            }; ;
+            };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

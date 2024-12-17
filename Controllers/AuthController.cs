@@ -21,9 +21,7 @@ namespace Project_A_Server.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
         {
-            var existingUser = await _userService.GetUserByUsernameAsync(registerDto.Username);
-            if (existingUser != null)
-                return BadRequest("Username is already taken");
+            await _userService.GetUserByUsernameAsync(registerDto.Username);
 
             await _userService.CreateUserAsync(registerDto.Username, registerDto.Password);
             return Ok(new { Message = "User registered successfully." });
@@ -33,9 +31,6 @@ namespace Project_A_Server.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
             var user = await _userService.GetUserByUsernameAsync(loginDto.Username);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
-                return Unauthorized("Invalid username or password.");
-
             var token = _userService.GenerateJwtToken(user);
 
             await _sessionService.SetSessionAsync(token, user);

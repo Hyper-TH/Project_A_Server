@@ -27,13 +27,13 @@ namespace Project_A_Server.Services.Redis
 
         public async Task CacheIDAsync(string id, string docId)
         {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(docId))
+            {
+                throw new ArgumentException("ID and docID must not be null or empty.");
+            }
+
             try
             {
-                if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(docId))
-                {
-                    throw new ArgumentException("ID and docID must not be null or empty.");
-                }
-
                 await _redisDb.StringSetAsync(id, docId);
             }
             catch (Exception ex)

@@ -20,12 +20,15 @@ namespace Project_A_Server.Services.Redis
 
             await db.StringSetAsync(token, userJson, TimeSpan.FromMinutes(30));
         }
-        public async Task<User> GetSessionAsync(string token)
+
+        public async Task<User?> GetSessionAsync(string token)
         {
             var db = _redis.GetDatabase();
             var userJson = await db.StringGetAsync(token);
 
-            return userJson.IsNullOrEmpty ? null : Newtonsoft.Json.JsonConvert.DeserializeObject<User>(userJson);
+            return !string.IsNullOrEmpty(userJson)
+                ? Newtonsoft.Json.JsonConvert.DeserializeObject<User>(userJson!)
+                : null;
         }
 
         public async Task RemoveSessionAsync(string token)

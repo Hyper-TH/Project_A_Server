@@ -30,7 +30,7 @@ namespace Project_A_Server.Services.MongoDB.Meetings
         public async Task AddUserToMeetingAsync(string uid, string mid)
         {
             var collection = _repository.GetCollection();
-            var filter = Builders<Attendees>.Filter.Eq(x => x.Id, mid);
+            var filter = Builders<Attendees>.Filter.Eq(x => x.mID, mid);
             var update = Builders<Attendees>.Update.AddToSet(x => x.Users, uid);
 
             var result = await collection.UpdateOneAsync(filter, update);
@@ -45,7 +45,7 @@ namespace Project_A_Server.Services.MongoDB.Meetings
         public async Task RemoveUserFromMeetingAsync(string uid, string mid)
         {
             var collection = _repository.GetCollection();
-            var filter = Builders<Attendees>.Filter.Eq(x => x.Id, mid);
+            var filter = Builders<Attendees>.Filter.Eq(x => x.mID, mid);
             var update = Builders<Attendees>.Update.Pull(x => x.Users, uid);
 
             var result = await collection.UpdateOneAsync(filter, update);

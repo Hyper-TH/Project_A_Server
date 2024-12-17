@@ -24,16 +24,20 @@ var redisConfig = builder.Configuration.GetSection("Redis");
 var redisUrl = redisConfig["Url"];
 var redisToken = builder.Configuration["UPSTASH_REDIS_TOKEN"];
 
-if (string.IsNullOrEmpty(redisToken))
+if (string.IsNullOrEmpty(redisUrl) || string.IsNullOrEmpty(redisToken))
 {
-    throw new InvalidOperationException("Redis token not found in environment variables.");
+    var missingValues = new List<string>();
+    if (string.IsNullOrEmpty(redisUrl)) missingValues.Add("Redis URL");
+    if (string.IsNullOrEmpty(redisToken)) missingValues.Add("Redis Token");
+
+    throw new InvalidOperationException($"Missing configuration values: {string.Join(", ", missingValues)}");
 }
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
     var configuration = new ConfigurationOptions
     {
-        EndPoints = { redisUrl }, 
+        EndPoints = { redisUrl },
         Password = redisToken,   
         Ssl = true,              
         AbortOnConnectFail = false
@@ -48,7 +52,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
     var dBSettings = builder.Configuration.GetSection("ProjectADatabase").Get<DBSettings>();
-    if (string.IsNullOrEmpty(dBSettings.ConnectionString))
+    if (dBSettings == null || string.IsNullOrEmpty(dBSettings.ConnectionString))
     {
         throw new Exception("ProjectA Database ConnectionString is not configured.");
     }
