@@ -1,4 +1,5 @@
 ﻿using Project_A_Server.Models;
+using Project_A_Server.Utils;
 using Project_A_Server.Models.Meetings;
 using Project_A_Server.Services.Redis;
 using MongoDB.Driver;
@@ -16,67 +17,64 @@ namespace Project_A_Server.Services
     public class UserService : IUserService
     {
         private readonly IMongoCollection<User> _users;
+        private readonly IConfiguration _configuration;
+        private readonly IGenericRepository<User> _repository;
         private readonly UserMeetingsService _userMeetings;
         private readonly UserAvailabilitiesService _userAvailabilities;
-        private readonly IConfiguration _configuration;
         private readonly RedisService _cache;
 
         public UserService(
-            IMongoClient mongoClient, IConfiguration configuration, 
+            IMongoClient mongoClient, IConfiguration configuration, IGenericRepository<User> repository,
             UserMeetingsService userMeetingsService, UserAvailabilitiesService userAvailabilities,
             RedisService projectARedisService)
         {
             var database = mongoClient.GetDatabase("ProjectA");
+
             _users = database.GetCollection<User>("Users");
+            _repository = repository;
             _userMeetings = userMeetingsService;
             _userAvailabilities = userAvailabilities;
             _configuration = configuration;
             _cache = projectARedisService;
         }
 
-        public async Task<User> GetUserByUsernameAsync(string username)
+        public async Task<User> GetByUsernameAsync(string username)
         {
-            var user = await _users.Find(u => u.Username == username).FirstOrDefaultAsync();
-            return user ?? throw new InvalidOperationException($"User with username '{username}' not found.");
-        }
+            var user = await _repository.GetByUsernameAsync(username);
 
-        public async Task<User?> GetUserByUidAsync(string uid)
-        {
-            return await _users.Find(u => u.UID == uid).FirstOrDefaultAsync();
+            return user ?? throw new InvalidOperationException($"User with username '{username}' not found.");
         }
 
         public async Task CreateUserAsync(string username, string password)
         {
             var user = new User
             {
-                UID = Guid.NewGuid().ToString("N"),
+                UID = GuidGenerator.Generate(), 
                 Username = username,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(password)
             };
 
-            await _users.InsertOneAsync(user);
-            var newUser = await _users.Find(u => u.UID == user.UID).FirstOrDefaultAsync();
-            if (newUser?.Id == null)
-            {
-                throw new InvalidOperationException("Failed to retrieve user ID after insertion.");
+            await _repository.CreateAsync(user);
 
-            }
-            await _cache.CacheIDAsync(newUser.UID, newUser.Id);  
+            var newUser = await _repository.GetByUIDAsync(user.UID);
+            if (newUser?.Id is null) throw new InvalidOperationException("Failed to retrieve user ID after insertion.");
 
             var userMeetings = new UserMeetings
             {
                 UID = user.UID,
-                Meetings = Array.Empty<string>()
+                Meetings = []
             };
 
             var userAvailabilities = new UserAvailabilities
             {
                 UID = user.UID,
-                Availabilities= Array.Empty<string>()
+                Availabilities = []
             };
 
             await _userMeetings.CreateAsync(userMeetings);
             await _userAvailabilities.CreateAsync(userAvailabilities);
+            
+            await _cache.CacheIDAsync(newUser.UID, newUser.Id);
         }
 
         public string GenerateJwtToken(User user)
@@ -84,9 +82,7 @@ namespace Project_A_Server.Services
             var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
 
             if (string.IsNullOrEmpty(secretKey))
-            {
                 throw new InvalidOperationException("JWT secret key is not set in the environment variables.");
-            }
 
             var claims = new[]
             {

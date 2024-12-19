@@ -15,7 +15,7 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
         public async Task<List<Availability>> GetAllAsync() => 
             await _repository.GetAllAsync();
 
-        public async Task<Availability?> GetAsync(string id) => 
+        public async Task<Availability?> GetByIdAsync(string id) => 
             await _repository.GetByObjectIdAsync(id);
 
         public async Task CreateAsync(Availability newAvailability) =>

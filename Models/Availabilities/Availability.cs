@@ -13,10 +13,10 @@ namespace Project_A_Server.Models.Availabilities
         public string? aID { get; set; }
 
         [BsonElement("UID")]
-        public string? UID { get; set; }
+        public string UID { get; set; } = null!;
 
         [BsonElement("gID")]
-        public string? gID { get; set; }
+        public string gID { get; set; } = null!;
 
         [BsonElement("DateTime")]
         public DateTime Date { get; set; }

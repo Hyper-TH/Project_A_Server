@@ -2,6 +2,8 @@
 using Project_A_Server.Services.Redis;
 using Project_A_Server.Services.MongoDB.Availabilities;
 using Project_A_Server.Models.Availabilities;
+using Microsoft.AspNetCore.Authorization;
+using Project_A_Server.Utils;
 
 namespace Project_A_Server.Controllers
 {
@@ -28,33 +30,27 @@ namespace Project_A_Server.Controllers
         public async Task<IActionResult> GetGroup(string gid)
         {
             if (string.IsNullOrEmpty(gid))
-            {
-                return BadRequest("Availability ID cannot be null or empty.");
-            }
+                return BadRequest("Group ID cannot be null or empty.");
 
             try
             {
                 var cachedDocId = await _cache.GetCachedDocIdAsync(gid);
                 if (string.IsNullOrEmpty(cachedDocId))
-                {
                     return Conflict(new { Message = $"ID {gid} does not exist." });
-                }
 
-                var group = await _groupsService.GetAsync(cachedDocId);
+                var group = await _groupsService.GetByIdAsync(cachedDocId);
 
                 if (group == null)
-                {
                     return NotFound($"Group with ID '{gid}' was not found.");
-                }
 
                 return Ok(group);
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Error retrieving Meeting: {ex.Message}\n{ex.StackTrace}");
+                Console.Error.WriteLine($"Error retrieving Group: {ex.Message}\n{ex.StackTrace}");
 
                 return StatusCode(StatusCodes.Status500InternalServerError,
-                    new { Message = "An error occurred while retrieving the meeting." });
+                    new { Message = "An error occurred while retrieving the group." });
             }
         }
 
@@ -62,16 +58,14 @@ namespace Project_A_Server.Controllers
         public async Task<IActionResult> PostGroup([FromBody] Group newGroup)
         {
             if (newGroup == null)
-            {
-                return BadRequest("Invalid availability data");
-            }
+                return BadRequest("Invalid group data");
 
             try
             {
                 string gID;
                 do
                 {
-                    gID = Guid.NewGuid().ToString("N");
+                    gID = GuidGenerator.Generate();
                     var cachedDocId = await _cache.GetCachedDocIdAsync(gID);
 
                     if (string.IsNullOrEmpty(cachedDocId))
@@ -88,11 +82,10 @@ namespace Project_A_Server.Controllers
 
                 await _groupsService.CreateAsync(newGroup);
 
-                var insertedGroup = await _groupsService.GetAsync(newGroup.gID);
+                var insertedGroup = await _groupsService.GetByIdAsync(newGroup.Id);
                 if (insertedGroup?.Id == null)
-                {
-                    throw new InvalidOperationException("Failed to retrieve group ID after insertion.");
-                }
+                    throw new InvalidOperationException("Failed to retrieve Object ID after insertion.");
+
                 await _cache.CacheIDAsync(gID, insertedGroup.Id);
 
                 return CreatedAtAction(nameof(GetGroup), new { newGroup.gID }, newGroup);
@@ -102,7 +95,7 @@ namespace Project_A_Server.Controllers
                 Console.Error.WriteLine($"Error creating Group: {ex.Message}", ex);
 
                 return StatusCode(StatusCodes.Status500InternalServerError,
-                    new { Message = "An error occured while creating the meeting." });
+                    new { Message = "An error occured while creating the group." });
             }
         }
 
@@ -110,26 +103,20 @@ namespace Project_A_Server.Controllers
         public async Task<IActionResult> GetAvailability(string aid)
         {
             if (string.IsNullOrEmpty(aid))
-            {
                 return BadRequest("Availability ID cannot be null or empty.");
-            }
 
             try
             {
                 var cachedDocId = await _cache.GetCachedDocIdAsync(aid);
                 if (string.IsNullOrEmpty(cachedDocId))
-                {
                     return Conflict(new { Message = $"ID {aid} does not exist." });
-                }
 
-                var meeting = await _availabilitiesService.GetAsync(cachedDocId);
+                var availability = await _availabilitiesService.GetByIdAsync(cachedDocId);
 
-                if (meeting == null)
-                {
+                if (availability == null)
                     return NotFound($"Availability with ID '{aid}' was not found.");
-                }
 
-                return Ok(meeting);
+                return Ok(availability);
             }
             catch (Exception ex)
             {
@@ -144,18 +131,14 @@ namespace Project_A_Server.Controllers
         public async Task<IActionResult> GetUserAvailabilities(string uID)
         {
             if (string.IsNullOrEmpty(uID))
-            {
                 return BadRequest("User ID cannot be null or empty.");
-            }
 
             try
             {
                 var userAvailabilities = await _userAvailabilitiesService.GetByUIDAsync(uID);
 
                 if (userAvailabilities == null)
-                {
                     return NotFound($"User with ID '{uID}' was not found.");
-                }
 
                 var availabilityDetails = new List<Availability>();
 
@@ -167,18 +150,13 @@ namespace Project_A_Server.Controllers
                         if (string.IsNullOrEmpty(cachedDocId))
                         {
                             Console.WriteLine($"Availability ID '{aid}' does not exist in Redis.");
-                            continue; // Skip this availability if no docID is found
+                            continue; 
                         }
 
-                        var availability = await _availabilitiesService.GetAsync(cachedDocId);
-                        if (availability != null)
-                        {
-                            availabilityDetails.Add(availability);
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Availability with docID '{cachedDocId}' not found in MongoDB.");
-                        }
+                        var availability = await _availabilitiesService.GetByIdAsync(cachedDocId);
+
+                        if (availability != null) availabilityDetails.Add(availability);
+                        else Console.WriteLine($"Availability with docID '{cachedDocId}' not found in MongoDB.");
                     }
                     catch (Exception ex)
                     {
@@ -197,21 +175,18 @@ namespace Project_A_Server.Controllers
             }
         }
 
-
         [HttpPost("availability")]
         public async Task<IActionResult> PostAvailability([FromBody] Availability newAvailability)
         {
             if (newAvailability == null)
-            {
                 return BadRequest("Invalid availability data");
-            }
 
             try
             {
                 string aID;
                 do
                 {
-                    aID = Guid.NewGuid().ToString("N");
+                    aID = GuidGenerator.Generate();
                     var cachedDocId = await _cache.GetCachedDocIdAsync(aID);
 
                     if (string.IsNullOrEmpty(cachedDocId))
@@ -227,14 +202,12 @@ namespace Project_A_Server.Controllers
                 newAvailability.aID = aID;
 
                 await _availabilitiesService.CreateAsync(newAvailability);
-                await _userAvailabilitiesService.AddAvailabilityAsync(newAvailability.UID ?? throw new InvalidOperationException("Availability UID is null"),
-                    newAvailability.aID ?? throw new InvalidOperationException("Availability ID is null"));
+                await _userAvailabilitiesService.AddAvailabilityAsync(newAvailability.UID, newAvailability.aID);
 
-                var insertedAvailability = await _groupsService.GetAsync(aID);
+                var insertedAvailability = await _groupsService.GetByIdAsync(aID);
                 if (insertedAvailability?.Id == null)
-                {
-                    throw new InvalidOperationException("Failed to retrieve group ID after insertion.");
-                }
+                    throw new InvalidOperationException("Failed to retrieve ObjectID after insertion.");
+
                 await _cache.CacheIDAsync(aID, insertedAvailability.Id);
 
                 return CreatedAtAction(nameof(GetAvailability), new { newAvailability.aID }, newAvailability);
@@ -244,7 +217,7 @@ namespace Project_A_Server.Controllers
                 Console.Error.WriteLine($"Error creating Availability: {ex.Message}", ex);
 
                 return StatusCode(StatusCodes.Status500InternalServerError,
-                    new { Message = "An error occured while creating the meeting." });
+                    new { Message = "An error occured while creating the availability." });
             }
         }
     }

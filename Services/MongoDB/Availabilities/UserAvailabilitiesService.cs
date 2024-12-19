@@ -1,7 +1,7 @@
 ﻿using MongoDB.Driver;
 using Project_A_Server.Interfaces;
 using Project_A_Server.Models.Availabilities;
-using Project_A_Server.Models.Meetings;
+using System.Security.Cryptography;
 
 namespace Project_A_Server.Services.MongoDB.Availabilities
 {
@@ -18,7 +18,7 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
             await _repository.GetAllAsync();
 
         public async Task<UserAvailabilities?> GetByUIDAsync(string uid) =>
-            await _repository.GetByIdAsync(uid);
+            await _repository.GetByUIDAsync(uid);
 
         public async Task CreateAsync(UserAvailabilities newAvailability) =>
             await _repository.CreateAsync(newAvailability);
@@ -31,13 +31,23 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
 
         public async Task AddAvailabilityAsync(string uid, string aid)
         {
-            var collection = _repository.GetCollection();
-            var update = Builders<UserAvailabilities>.Update.Push(x => x.Availabilities, aid);
-            var result = await collection.UpdateOneAsync(x => x.UID == uid, update);
+            var filter = Builders<UserAvailabilities>.Filter.Eq(x => x.UID, uid);
+            var update = Builders<UserAvailabilities>.Update.AddToSet(x => x.Availabilities, aid);
+
+            UpdateResult result = await _repository.UpdateOneAsync(filter, update);
 
             if (result.MatchedCount == 0)
                 throw new InvalidOperationException($"User with ID {uid} not found.");
         }
+        public async Task RemoveAvailabilityAsync(string uid, string aid)
+        {
+            var filter = Builders<UserAvailabilities>.Filter.Eq(x => x.UID, uid);
+            var update = Builders<UserAvailabilities>.Update.Pull(x => x.Availabilities, aid);
 
+            UpdateResult result = await _repository.UpdateOneAsync(filter, update);
+
+            if (result.MatchedCount == 0)
+                throw new InvalidOperationException($"User with ID {uid} not found.");
+        }
     }
 }
