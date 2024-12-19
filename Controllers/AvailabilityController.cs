@@ -82,7 +82,7 @@ namespace Project_A_Server.Controllers
 
                 await _groupsService.CreateAsync(newGroup);
 
-                var insertedGroup = await _groupsService.GetByIdAsync(newGroup.Id);
+                var insertedGroup = await _groupsService.GetAsync(gID);
                 if (insertedGroup?.Id == null)
                     throw new InvalidOperationException("Failed to retrieve Object ID after insertion.");
 

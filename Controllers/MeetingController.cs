@@ -154,7 +154,7 @@ namespace Project_A_Server.Controllers
         }
 
         [HttpPost("meeting")]
-        public async Task<IActionResult> Post([FromBody] Meeting newMeeting)
+        public async Task<IActionResult> PostMeeting([FromBody] Meeting newMeeting)
         {
             if (newMeeting == null)
                 return BadRequest("Invalid meeting data");
