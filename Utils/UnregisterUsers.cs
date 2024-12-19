@@ -1,7 +1,7 @@
 ﻿using Project_A_Server.Services.MongoDB.Meetings;
 using Project_A_Server.Services.Redis;
 
-namespace Project_A_Server.Services.MongoDB.Utils
+namespace Project_A_Server.Utils
 {
     public class UnregisterUsers
     {

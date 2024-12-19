@@ -1,20 +1,11 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using MongoDB.Driver;
 using Project_A_Server.Services.Redis;
 using Project_A_Server.Services;
-using StackExchange.Redis;
-using System.Text;
-using Project_A_Server.Models.DatabaseSettings;
-using Microsoft.Extensions.Options;
-using Project_A_Server.Models;
-using Project_A_Server.Services.MongoDB.Utils;
-using Project_A_Server.Models.Meetings;
 using Project_A_Server.Services.MongoDB.Meetings;
 using Project_A_Server.Interfaces;
 using Project_A_Server.Repositories;
-using Project_A_Server.Models.Availabilities;
 using Project_A_Server.Services.MongoDB.Availabilities;
 using Project_A_Server.Configuration;
+using Project_A_Server.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
 

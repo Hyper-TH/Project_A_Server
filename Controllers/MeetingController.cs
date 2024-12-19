@@ -1,13 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Project_A_Server.Models;
-using Project_A_Server.Services.MongoDB.Utils;
 using Project_A_Server.Services.Redis;
-using Project_A_Server.Services;
-using System.Security.Cryptography;
 using Project_A_Server.Models.Meetings;
 using Project_A_Server.Services.MongoDB.Meetings;
-using Project_A_Server.Services.MongoDB.Availabilities;
+using Project_A_Server.Utils;
 
 // TODO: Change logic by taking in the entire document and updating it
 // instead of directly updating the resource
@@ -15,7 +11,7 @@ namespace Project_A_Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class MainController : ControllerBase
+    public class MeetingController : ControllerBase
     {
         private readonly MeetingsService _meetingsService;
         private readonly AttendeesService _attendeesService;
@@ -23,7 +19,7 @@ namespace Project_A_Server.Controllers
         private readonly UnregisterUsers _unregisterUsers;
         private readonly RedisService _cache;
 
-        public MainController(MeetingsService meetingsService,
+        public MeetingController(MeetingsService meetingsService,
                                     AttendeesService attendeesService, UserMeetingsService userMeetings,
                                     UnregisterUsers unregisterUsers, RedisService redisService)
         {
@@ -38,24 +34,18 @@ namespace Project_A_Server.Controllers
         public async Task<IActionResult> GetMeeting(string mid)
         {
             if (string.IsNullOrEmpty(mid))
-            {
                 return BadRequest("Meeting ID cannot be null or empty.");
-            }
 
             try
             {
                 var cachedDocId = await _cache.GetCachedDocIdAsync(mid);
                 if (string.IsNullOrEmpty(cachedDocId))
-                {
                     return Conflict(new { Message = $"ID {mid} does not exist." });
-                }
 
-                var meeting = await _meetingsService.GetAsync(cachedDocId);
+                var meeting = await _meetingsService.GetByIdAsync(cachedDocId);
 
                 if (meeting == null)
-                {
                     return NotFound($"Meeting with ID '{mid}' was not found.");
-                }
 
                 return Ok(meeting);
             }
@@ -68,23 +58,17 @@ namespace Project_A_Server.Controllers
             }
         }
 
-        [Authorize]
         [HttpGet("meetings/{uid}")]
         public async Task<IActionResult> GetUserMeetings(string uid)
         {
             if (string.IsNullOrEmpty(uid))
-            {
                 return BadRequest("User ID cannot be null or empty.");
-            }
 
             try
             {
                 var userMeetings = await _userMeetingsService.GetByUIDAsync(uid);
-
                 if (userMeetings == null)
-                {
                     return NotFound($"User with ID '{uid}' was not found.");
-                }
 
                 var meetingDetails = new List<Meeting>(); 
 
@@ -96,18 +80,13 @@ namespace Project_A_Server.Controllers
                         if (string.IsNullOrEmpty(cachedDocId))
                         {
                             Console.WriteLine($"Meeting ID '{mid}' does not exist in Redis.");
-                            continue; // Skip this meeting if no docID is found
+                            continue;
                         }
 
-                        var meeting = await _meetingsService.GetAsync(cachedDocId);
-                        if (meeting != null)
-                        {
-                            meetingDetails.Add(meeting); 
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Meeting with docID '{cachedDocId}' not found in MongoDB.");
-                        }
+                        var meeting = await _meetingsService.GetByIdAsync(cachedDocId);
+                        if (meeting != null) meetingDetails.Add(meeting);
+                        else Console.WriteLine($"Meeting with docID '{cachedDocId}' not found in MongoDB.");
+
                     }
                     catch (Exception ex)
                     {
@@ -126,7 +105,6 @@ namespace Project_A_Server.Controllers
             }
         }
 
-        [Authorize]
         [HttpPut("register/{uID}/{mID}")]
         public async Task<IActionResult> RegisterMeeting(string uID, string mID)
         {
@@ -134,9 +112,7 @@ namespace Project_A_Server.Controllers
             {
                 var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
                 if (string.IsNullOrEmpty(cachedDocId))
-                {
                     return Conflict(new { Message = $"ID {mID} does not exist." });
-                }
 
                 await _userMeetingsService.AddMeetingAsync(uID, mID);
                 await _attendeesService.AddUserToMeetingAsync(uID, mID);
@@ -152,7 +128,6 @@ namespace Project_A_Server.Controllers
             }
         }
 
-        [Authorize]
         [HttpPut("unregister/{uID}/{mID}")]
         public async Task<IActionResult> Unregister(string uID, string mID)
         {
@@ -178,21 +153,18 @@ namespace Project_A_Server.Controllers
             }
         }
 
-        [Authorize]
         [HttpPost("meeting")]
         public async Task<IActionResult> Post([FromBody] Meeting newMeeting)
         {
             if (newMeeting == null)
-            {
                 return BadRequest("Invalid meeting data");
-            }
 
             try
             {
                 string mID;
                 do
                 {
-                    mID = Guid.NewGuid().ToString("N");
+                    mID = GuidGenerator.Generate();
                     var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
 
                     if (string.IsNullOrEmpty(cachedDocId))
@@ -209,7 +181,7 @@ namespace Project_A_Server.Controllers
                 var newAttendees = new Attendees
                 {
                     mID = newMeeting.mID,
-                    Users = Array.Empty<string>()
+                    Users = []
                 };
 
                 await _meetingsService.CreateAsync(newMeeting);
@@ -218,9 +190,8 @@ namespace Project_A_Server.Controllers
 
                 var insertedMeeting = await _meetingsService.GetAsync(mID);
                 if (insertedMeeting?.Id == null)
-                {
-                    throw new InvalidOperationException("Failed to retrieve meeting ID after insertion.");
-                }
+                    throw new InvalidOperationException("Failed to retrieve Object ID after insertion.");
+
                 await _cache.CacheIDAsync(mID, insertedMeeting.Id);
 
                 return CreatedAtAction(nameof(GetMeeting), new { newMeeting.mID }, newMeeting);
@@ -234,7 +205,6 @@ namespace Project_A_Server.Controllers
             }
         }
 
-        [Authorize]
         [HttpDelete("meeting/{uID}/{mID}")]
         public async Task<IActionResult> DeleteMeeting(string uID, string mID)
         {
@@ -242,9 +212,7 @@ namespace Project_A_Server.Controllers
             {
                 var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
                 if (string.IsNullOrEmpty(cachedDocId))
-                {
                     return Conflict(new { Message = $"ID {mID} does not exist." });
-                }
 
                 await _unregisterUsers.UnregisterMeetingAsync(mID);
                 await _userMeetingsService.RemoveMeetingAsync(uID, mID);

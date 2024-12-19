@@ -28,9 +28,7 @@ namespace Project_A_Server.Services.Redis
         public async Task CacheIDAsync(string id, string docId)
         {
             if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(docId))
-            {
                 throw new ArgumentException("ID and docID must not be null or empty.");
-            }
 
             try
             {
@@ -46,9 +44,7 @@ namespace Project_A_Server.Services.Redis
         public async Task RemoveCachedIDAsync(string id)
         {
             if (string.IsNullOrEmpty(id))
-            {
                 throw new ArgumentException("ID cannot be null or empty.", nameof(id));
-            }
 
             await _redisDb.KeyDeleteAsync(id);
         }

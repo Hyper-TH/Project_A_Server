@@ -21,8 +21,6 @@ namespace Project_A_Server.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
         {
-            await _userService.GetUserByUsernameAsync(registerDto.Username);
-
             await _userService.CreateUserAsync(registerDto.Username, registerDto.Password);
             return Ok(new { Message = "User registered successfully." });
         }
@@ -30,7 +28,7 @@ namespace Project_A_Server.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            var user = await _userService.GetUserByUsernameAsync(loginDto.Username);
+            var user = await _userService.GetByUsernameAsync(loginDto.Username);
             var token = _userService.GenerateJwtToken(user);
 
             await _sessionService.SetSessionAsync(token, user);
@@ -38,16 +36,16 @@ namespace Project_A_Server.Controllers
             return Ok(new
             {
                 Token = token,
-                UID = user.UID,
-                Username = user.Username,
-                Location = user.Location,
+                user.UID,
+                user.Username,
+                user.Location,
             });
         }
 
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
-            var token = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+            var token = Request.Headers.Authorization.ToString().Replace("Bearer ", "");
             await _sessionService.RemoveSessionAsync(token);
 
             return Ok("Logged out successfully.");

@@ -16,9 +16,17 @@ namespace Project_A_Server.Repositories
         public async Task<List<T>> GetAllAsync() =>
             await _collection.Find(_ => true).ToListAsync();
 
-        // Normal IDs
-        public async Task<T?> GetByIdAsync(string id) =>
-            await _collection.Find(Builders<T>.Filter.Eq("_id", id)).FirstOrDefaultAsync();
+        // Regular IDs
+        public async Task<T?> GetByUsernameAsync(string username) =>
+            await _collection.Find(Builders<T>.Filter.Eq("Username", username)).FirstOrDefaultAsync();
+        public async Task<T?> GetByUIDAsync(string id) =>
+            await _collection.Find(Builders<T>.Filter.Eq("UID", id)).FirstOrDefaultAsync();
+        public async Task<T?> GetByMIDAsync(string id) => 
+            await _collection.Find(Builders<T>.Filter.Eq("mID", id)).FirstOrDefaultAsync();
+        public async Task<T?> GetByAIDAsync(string id) =>
+            await _collection.Find(Builders<T>.Filter.Eq("aID", id)).FirstOrDefaultAsync();
+        public async Task<T?> GetByGIDAsync(string id) =>
+            await _collection.Find(Builders<T>.Filter.Eq("gID", id)).FirstOrDefaultAsync();
 
         // Object IDs
         public async Task<T?> GetByObjectIdAsync(string id)
@@ -37,6 +45,9 @@ namespace Project_A_Server.Repositories
         public async Task UpdateAsync(string id, T entity) =>
             await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("_id", id), entity);
 
+        public async Task<UpdateResult> UpdateOneAsync(FilterDefinition<T> filter, UpdateDefinition<T> update) =>
+            await _collection.UpdateOneAsync(filter, update);
+
         public async Task DeleteAsync(string id) =>
             await _collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", id));
 
@@ -48,7 +59,6 @@ namespace Project_A_Server.Repositories
             }
 
             await _collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", objectId));
-
         }
         
         public IMongoCollection<T> GetCollection() => _collection;
