@@ -1,23 +1,30 @@
 ﻿using MongoDB.Driver;
 using Project_A_Server.Interfaces;
 using Project_A_Server.Models.Meetings;
+using Project_A_Server.Services.Redis;
+using System.Security.Cryptography;
 
 namespace Project_A_Server.Services.MongoDB.Meetings
 {
     public class UserMeetingsService
     {
         private readonly IGenericRepository<UserMeetings> _repository;
+        private readonly RedisService _cache;
 
-        public UserMeetingsService(IGenericRepository<UserMeetings> repository)
+        public UserMeetingsService(IGenericRepository<UserMeetings> repository, RedisService redisService)
         {
             _repository = repository;
+            _cache = redisService;
         }
 
-        public async Task<List<UserMeetings>> GetAllAsync() =>
-            await _repository.GetAllAsync();
+        public async Task<UserMeetings?> GetAsync(string uid)
+        {
+            if (uid == null)
+                throw new ArgumentNullException(nameof(uid), "User ID can not be null.");
 
-        public async Task<UserMeetings?> GetByUIDAsync(string uid) =>
-            await _repository.GetByUIDAsync(uid);
+            var meetings = await _repository.GetByUIDAsync(uid);
+            return meetings ?? throw new KeyNotFoundException($"No Meetings found for UID: {uid}.");
+        }
 
         public async Task CreateAsync(UserMeetings newUserMeeting) =>
             await _repository.CreateAsync(newUserMeeting);

@@ -19,8 +19,19 @@ namespace Project_A_Server.Services.MongoDB.Meetings
         public async Task<Attendees?> GetAsync(string id) =>
             await _repository.GetByMIDAsync(id);
 
-        public async Task CreateAsync(Attendees newAttendee) =>
-            await _repository.CreateAsync(newAttendee);
+        public async Task CreateAsync(string mid)
+        {
+            if (string.IsNullOrEmpty(mid))
+                throw new ArgumentNullException(nameof(mid), "Meeting ID cannot be null or empty.");
+            
+            var newData = new Attendees
+            {
+                mID = mid,
+                Users = []
+            };
+
+            await _repository.CreateAsync(newData);
+        }
 
         public async Task RemoveAsync(string id) =>
             await _repository.DeleteAsync(id);

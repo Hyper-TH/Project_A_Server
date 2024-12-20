@@ -4,6 +4,7 @@ using Project_A_Server.Services.Redis;
 using Project_A_Server.Models.Meetings;
 using Project_A_Server.Services.MongoDB.Meetings;
 using Project_A_Server.Utils;
+using System.Security.Cryptography;
 
 // TODO: Change logic by taking in the entire document and updating it
 // instead of directly updating the resource
@@ -33,16 +34,8 @@ namespace Project_A_Server.Controllers
         [HttpGet("meeting/{mid}")]
         public async Task<IActionResult> GetMeeting(string mid)
         {
-            if (string.IsNullOrEmpty(mid))
-                return BadRequest("Meeting ID cannot be null or empty.");
-
-            try
-            {
-                var cachedDocId = await _cache.GetCachedDocIdAsync(mid);
-                if (string.IsNullOrEmpty(cachedDocId))
-                    return Conflict(new { Message = $"ID {mid} does not exist." });
-
-                var meeting = await _meetingsService.GetByIdAsync(cachedDocId);
+            try { 
+                var meeting = await _meetingsService.GetAsync(mid);
 
                 if (meeting == null)
                     return NotFound($"Meeting with ID '{mid}' was not found.");
@@ -61,14 +54,11 @@ namespace Project_A_Server.Controllers
         [HttpGet("meetings/{uid}")]
         public async Task<IActionResult> GetUserMeetings(string uid)
         {
-            if (string.IsNullOrEmpty(uid))
-                return BadRequest("User ID cannot be null or empty.");
-
             try
             {
-                var userMeetings = await _userMeetingsService.GetByUIDAsync(uid);
+                var userMeetings = await _userMeetingsService.GetAsync(uid);
                 if (userMeetings == null)
-                    return NotFound($"User with ID '{uid}' was not found.");
+                    return NotFound($"No meetings found for user with UID: {uid}.");
 
                 var meetingDetails = new List<Meeting>(); 
 
@@ -76,16 +66,10 @@ namespace Project_A_Server.Controllers
                 {
                     try
                     {
-                        var cachedDocId = await _cache.GetCachedDocIdAsync(mid);
-                        if (string.IsNullOrEmpty(cachedDocId))
-                        {
-                            Console.WriteLine($"Meeting ID '{mid}' does not exist in Redis.");
-                            continue;
-                        }
+                        var meeting = await _meetingsService.GetAsync(mid);
 
-                        var meeting = await _meetingsService.GetByIdAsync(cachedDocId);
                         if (meeting != null) meetingDetails.Add(meeting);
-                        else Console.WriteLine($"Meeting with docID '{cachedDocId}' not found in MongoDB.");
+                        else Console.WriteLine($"Meeting with ID '{mid}' not found in MongoDB.");
 
                     }
                     catch (Exception ex)
@@ -95,6 +79,14 @@ namespace Project_A_Server.Controllers
                 }
 
                 return Ok(meetingDetails);
+            }
+            catch (ArgumentNullException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
             }
             catch (Exception ex)
             {
@@ -106,16 +98,12 @@ namespace Project_A_Server.Controllers
         }
 
         [HttpPut("register/{uID}/{mID}")]
-        public async Task<IActionResult> RegisterMeeting(string uID, string mID)
+        public async Task<IActionResult> RegisterMeeting(string uid, string mid)
         {
             try
             {
-                var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
-                if (string.IsNullOrEmpty(cachedDocId))
-                    return Conflict(new { Message = $"ID {mID} does not exist." });
-
-                await _userMeetingsService.AddMeetingAsync(uID, mID);
-                await _attendeesService.AddUserToMeetingAsync(uID, mID);
+                await _userMeetingsService.AddMeetingAsync(uid, mid);
+                await _attendeesService.AddUserToMeetingAsync(uid, mid);
 
                 return Ok(new { Message = "Registered meeting successfully" });
             }
@@ -133,12 +121,6 @@ namespace Project_A_Server.Controllers
         {
             try
             {
-                var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
-                if (string.IsNullOrEmpty(cachedDocId))
-                {
-                    return Conflict(new { Message = $"ID {mID} does not exist." });
-                }
-
                 await _userMeetingsService.RemoveMeetingAsync(uID, mID);
                 await _attendeesService.RemoveUserFromMeetingAsync(uID, mID);
 
@@ -156,52 +138,27 @@ namespace Project_A_Server.Controllers
         [HttpPost("meeting")]
         public async Task<IActionResult> PostMeeting([FromBody] Meeting newMeeting)
         {
-            if (newMeeting == null)
-                return BadRequest("Invalid meeting data");
-
             try
             {
-                string mID;
-                do
-                {
-                    mID = GuidGenerator.Generate();
-                    var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
+                var insertedMeeting = await _meetingsService.CreateAsync(newMeeting);
+                if (insertedMeeting == null || string.IsNullOrEmpty(insertedMeeting.mID))
+                    throw new InvalidOperationException("Failed to create availability or set required properties.");
 
-                    if (string.IsNullOrEmpty(cachedDocId))
-                    {
-                        newMeeting.mID = mID;
-                        break;
-                    }
+                await _attendeesService.CreateAsync(insertedMeeting.mID);
+                await _userMeetingsService.AddMeetingAsync(insertedMeeting.Organizer, insertedMeeting.mID);
 
-                    Console.WriteLine($"Collision detected for mID: {mID}. Generating a new one.");
-                }
-                while (true);
-
-                newMeeting.mID = mID;
-                var newAttendees = new Attendees
-                {
-                    mID = newMeeting.mID,
-                    Users = []
-                };
-
-                await _meetingsService.CreateAsync(newMeeting);
-                await _attendeesService.CreateAsync(newAttendees);
-                await _userMeetingsService.AddMeetingAsync(newMeeting.Organizer, newMeeting.mID);
-
-                var insertedMeeting = await _meetingsService.GetAsync(mID);
-                if (insertedMeeting?.Id == null)
-                    throw new InvalidOperationException("Failed to retrieve Object ID after insertion.");
-
-                await _cache.CacheIDAsync(mID, insertedMeeting.Id);
-
-                return CreatedAtAction(nameof(GetMeeting), new { newMeeting.mID }, newMeeting);
+                return CreatedAtAction(nameof(GetMeeting), new { insertedMeeting.mID }, insertedMeeting);
+            }
+            catch (ArgumentNullException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Error creating Meeting: {ex.Message}", ex);
 
                 return StatusCode(StatusCodes.Status500InternalServerError,
-                    new { Message = "An error occured while creating the meeting." });
+                    new { Message = "An error occurred while creating the Meeting." });
             }
         }
 
@@ -210,22 +167,18 @@ namespace Project_A_Server.Controllers
         {
             try
             {
-                var cachedDocId = await _cache.GetCachedDocIdAsync(mID);
-                if (string.IsNullOrEmpty(cachedDocId))
-                    return Conflict(new { Message = $"ID {mID} does not exist." });
-
                 await _unregisterUsers.UnregisterMeetingAsync(mID);
                 await _userMeetingsService.RemoveMeetingAsync(uID, mID);
                 await _cache.RemoveCachedIDAsync(mID);
 
-                return Ok(new { Message = "Meeting removed successfully" });
+                return Ok(new { Message = "Meeting removed successfully." });
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Error removing Meeting: {ex.Message}", ex);
+                Console.Error.WriteLine($"Error deleting Meeting: {ex.Message}", ex);
 
                 return StatusCode(StatusCodes.Status500InternalServerError,
-                    new { Message = "An error occured while removing the meeting." });
+                    new { Message = "An error occurred while deleting the Meeting." });
             }
         }
     }

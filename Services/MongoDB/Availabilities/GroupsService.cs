@@ -1,29 +1,73 @@
 ﻿using MongoDB.Driver;
 using Project_A_Server.Interfaces;
 using Project_A_Server.Models.Availabilities;
+using Project_A_Server.Services.Redis;
+using Project_A_Server.Utils;
+using StackExchange.Redis;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 namespace Project_A_Server.Services.MongoDB.Availabilities
 {
     public class GroupsService
     {
         private readonly IGenericRepository<Group> _repository;
+        private readonly RedisService _cache;
 
-        public GroupsService(IGenericRepository<Group> repository)
+        public GroupsService(IGenericRepository<Group> repository, RedisService redisService)
         {
             _repository = repository;
+            _cache = redisService;
         }
 
         public async Task<List<Group>> GetAllAsync() =>
            await _repository.GetAllAsync();
 
-        public async Task<Group?> GetAsync(string id) =>
-            await _repository.GetByGIDAsync(id);
+        public async Task<Group?> GetAsync(string gid)
+        {
+            if (gid == null)
+                throw new ArgumentNullException(nameof(gid), "Group ID can not be null.");
 
-        public async Task<Group?> GetByIdAsync(string id) =>
-            await _repository.GetByObjectIdAsync(id);
+            var cachedDocId = await _cache.GetCachedDocIdAsync(gid);
 
-        public async Task CreateAsync(Group newGroup) =>
+            if (string.IsNullOrEmpty(cachedDocId))
+                throw new KeyNotFoundException($"Cached Doc ID for {gid} not found");
+
+            return await _repository.GetByObjectIdAsync(cachedDocId);
+        }
+
+        public async Task<Group> CreateAsync(Group newGroup)
+        {
+            if (newGroup == null)
+                throw new ArgumentNullException(nameof(newGroup), "Invalid group data.");
+
+            string gID;
+            do
+            {
+                gID = GuidGenerator.Generate();
+                var cachedDocId = await _cache.GetCachedDocIdAsync(gID);
+
+                if (string.IsNullOrEmpty(cachedDocId))
+                {
+                    newGroup.gID = gID;
+                    break;
+                }
+
+                Console.WriteLine($"Collision detected for gID: {gID}. Generating a new one.");
+            }
+            while (true);
+
             await _repository.CreateAsync(newGroup);
+
+            var newData = await _repository.GetByGIDAsync(gID);
+
+            if (newData?.Id == null)
+                throw new InvalidOperationException("Failed to retrieve Object ID after insertion.");
+
+            await _cache.CacheIDAsync(gID, newData.Id);
+
+            return newData;
+        }
 
         public async Task RemoveAsync(string id) =>
             await _repository.DeleteAsync(id);
