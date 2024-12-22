@@ -6,8 +6,6 @@ using Project_A_Server.Services.MongoDB.Meetings;
 using Project_A_Server.Utils;
 using System.Security.Cryptography;
 
-// TODO: Change logic by taking in the entire document and updating it
-// instead of directly updating the resource
 namespace Project_A_Server.Controllers
 {
     [ApiController]

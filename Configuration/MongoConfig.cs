@@ -80,7 +80,23 @@ public static class MongoConfig
             var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
             var client = sp.GetRequiredService<IMongoClient>();
             var database = client.GetDatabase(settings.DatabaseName);
+            return database.GetCollection<UserGroups>(settings.UserGroupsCollectionName);
+        });
+
+        services.AddScoped(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
+            var client = sp.GetRequiredService<IMongoClient>();
+            var database = client.GetDatabase(settings.DatabaseName);
             return database.GetCollection<Group>(settings.GroupsCollectionName);
+        });
+
+        services.AddScoped(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<DBSettings>>().Value;
+            var client = sp.GetRequiredService<IMongoClient>();
+            var database = client.GetDatabase(settings.DatabaseName);
+            return database.GetCollection<GroupAvailabilities>(settings.GroupAvailabilitiesCollectionName);
         });
     }
 }

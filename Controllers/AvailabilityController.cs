@@ -4,6 +4,7 @@ using Project_A_Server.Services.MongoDB.Availabilities;
 using Project_A_Server.Models.Availabilities;
 using Microsoft.AspNetCore.Authorization;
 
+// TODO: Reduce Boilerplating, collections that store id: [{}] have similar logic 
 namespace Project_A_Server.Controllers
 {
     [ApiController]
