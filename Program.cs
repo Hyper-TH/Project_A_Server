@@ -31,8 +31,10 @@ builder.Services.AddScoped<AttendeesService>();
 builder.Services.AddScoped<UserMeetingsService>();
 builder.Services.AddScoped<UnregisterUsers>();
 builder.Services.AddScoped<UserAvailabilitiesService>();
+builder.Services.AddScoped<UserGroupsService>();
 builder.Services.AddScoped<AvailabilitiesService>();
 builder.Services.AddScoped<GroupsService>();
+builder.Services.AddScoped<GroupAvailabilitiesService>();
 
 // ------------------
 // Add CORS and Swagger
