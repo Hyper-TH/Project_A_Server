@@ -1,7 +1,6 @@
 ﻿using MongoDB.Driver;
 using Project_A_Server.Interfaces;
 using Project_A_Server.Models.Availabilities;
-using System.Security.Cryptography;
 
 namespace Project_A_Server.Services.MongoDB.Availabilities
 {
@@ -13,9 +12,6 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
         {
             _repository = repository;
         }
-
-        public async Task<List<UserAvailabilities>> GetAllAsync() => 
-            await _repository.GetAllAsync();
 
         public async Task<UserAvailabilities?> GetAsync(string uid)
         {
@@ -56,6 +52,13 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
 
         public async Task RemoveAvailabilityAsync(string uid, string aid)
         {
+            if (uid == null || aid == null)
+            {
+                var nullValue = uid == null ? nameof(uid) : nameof(aid);
+
+                throw new ArgumentNullException(nullValue, $"{nullValue} cannot be null.");
+            }
+
             var filter = Builders<UserAvailabilities>.Filter.Eq(x => x.UID, uid);
             var update = Builders<UserAvailabilities>.Update.Pull(x => x.Availabilities, aid);
 

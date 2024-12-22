@@ -6,7 +6,7 @@ namespace Project_A_Server.Models.Availabilities
     {
         [BsonId]
         [BsonElement("gID")]
-        public int gID { get; set; }
+        public string? gID { get; set; } = null!;
 
         [BsonElement("Availabilities")]
         public string[] Availabilities { get; set; } = [];
