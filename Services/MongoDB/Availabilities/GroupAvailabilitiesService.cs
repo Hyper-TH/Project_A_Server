@@ -13,8 +13,16 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
             _repository = repository;
         }
 
-        public async Task CreateAsync(GroupAvailabilities newGroupAvailabilities) =>
-            await _repository.CreateAsync(newGroupAvailabilities);
+        public async Task CreateAsync(string gid)
+        {
+            var newData = new GroupAvailabilities
+            {
+                gID = gid,
+                Availabilities = []
+            };
+
+            await _repository.CreateAsync(newData);
+        }
 
         public async Task<GroupAvailabilities> GetAllAsync(string gid)
         {

@@ -21,12 +21,13 @@ namespace Project_A_Server.Services
         private readonly IGenericRepository<User> _repository;
         private readonly UserMeetingsService _userMeetings;
         private readonly UserAvailabilitiesService _userAvailabilities;
+        private readonly UserGroupsService _userGroups;
         private readonly RedisService _cache;
 
         public UserService(
             IMongoClient mongoClient, IConfiguration configuration, IGenericRepository<User> repository,
             UserMeetingsService userMeetingsService, UserAvailabilitiesService userAvailabilities,
-            RedisService projectARedisService)
+            UserGroupsService userGroups, RedisService projectARedisService)
         {
             var database = mongoClient.GetDatabase("ProjectA");
 
@@ -34,6 +35,7 @@ namespace Project_A_Server.Services
             _repository = repository;
             _userMeetings = userMeetingsService;
             _userAvailabilities = userAvailabilities;
+            _userGroups = userGroups;
             _configuration = configuration;
             _cache = projectARedisService;
         }
@@ -71,8 +73,15 @@ namespace Project_A_Server.Services
                 Availabilities = []
             };
 
+            var userGroups = new UserGroups
+            {
+                UID = user.UID,
+                Groups = []
+            };
+
             await _userMeetings.CreateAsync(userMeetings);
             await _userAvailabilities.CreateAsync(userAvailabilities);
+            await _userGroups.CreateAsync(userGroups);
             
             await _cache.CacheIDAsync(newUser.UID, newUser.Id);
         }

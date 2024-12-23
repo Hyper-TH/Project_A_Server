@@ -14,15 +14,20 @@ namespace Project_A_Server.Controllers
         private readonly AvailabilitiesService _availabilitiesService;
         private readonly UserAvailabilitiesService _userAvailabilitiesService;
         private readonly GroupsService _groupsService;
+        private readonly GroupAvailabilitiesService _groupAvailabilitiesService;
+        private readonly UserGroupsService _userGroupsService;
         private readonly RedisService _cache;
 
         public AvailabilityController(
-            AvailabilitiesService availabilities, UserAvailabilitiesService userAvailabilities, 
-            GroupsService groups, RedisService cache)
+            AvailabilitiesService availabilities, UserAvailabilitiesService userAvailabilities,
+            GroupAvailabilitiesService groupAvailabilities, GroupsService groups, 
+            UserGroupsService userGroups, RedisService cache)
         {
             _availabilitiesService = availabilities;
             _groupsService = groups;
+            _groupAvailabilitiesService = groupAvailabilities;
             _userAvailabilitiesService = userAvailabilities;
+            _userGroupsService = userGroups;
             _cache = cache;
         }
 
@@ -120,6 +125,16 @@ namespace Project_A_Server.Controllers
             try
             {
                 var insertedGroup = await _groupsService.CreateAsync(newGroup);
+
+                if (string.IsNullOrEmpty(insertedGroup.Organizer) || string.IsNullOrEmpty(insertedGroup.gID))
+                {
+                    var nullValue = string.IsNullOrEmpty(insertedGroup.Organizer) ? nameof(insertedGroup.Organizer) : nameof(insertedGroup.gID);
+                    throw new ArgumentNullException(nullValue, $"{nullValue} cannot be null or empty.");
+                }
+
+                await _userGroupsService.AddGroupAsync(insertedGroup.Organizer, insertedGroup.gID);
+                await _groupAvailabilitiesService.CreateAsync(insertedGroup.gID);
+
                 return CreatedAtAction(nameof(GetGroup), new { insertedGroup.gID }, insertedGroup);
             }
             catch (ArgumentNullException ex)
@@ -145,6 +160,7 @@ namespace Project_A_Server.Controllers
                     throw new InvalidOperationException("Failed to create availability or set required properties.");
 
                 await _userAvailabilitiesService.AddAvailabilityAsync(insertedAvailability.UID, insertedAvailability.aID);
+                await _groupAvailabilitiesService.AddAvailabilityAsync(insertedAvailability.gID, insertedAvailability.aID);
 
                 return CreatedAtAction(nameof(GetAvailability), new { insertedAvailability.aID }, insertedAvailability);
             }

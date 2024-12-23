@@ -20,9 +20,6 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
             _cache = redisService;
         }
 
-        public async Task<List<Group>> GetAllAsync() =>
-           await _repository.GetAllAsync();
-
         public async Task<Group?> GetAsync(string gid)
         {
             if (gid == null)
@@ -68,9 +65,6 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
 
             return newData;
         }
-
-        public async Task RemoveAsync(string id) =>
-            await _repository.DeleteAsync(id);
 
         public async Task AddUserToGroupAsync(string uid, string id)
         {
