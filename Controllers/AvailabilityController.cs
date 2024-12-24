@@ -52,6 +52,68 @@ namespace Project_A_Server.Controllers
             }
         }
 
+        [HttpGet("groups/{uid}")]
+        public async Task<IActionResult> GetGroups(string uid)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(uid))
+                    return BadRequest("User ID cannot be null or empty.");
+
+                // Retrieve user's groups
+                var userGroups = await _userGroupsService.GetAllAsync(uid);
+
+                if (userGroups == null)
+                    return NotFound($"User with ID '{uid}' was not found.");
+
+                var groupData = new List<object>();
+
+                foreach (var group in userGroups.Groups)
+                {
+                    // Retrieve detailed group info
+                    var groupDetails = await _groupsService.GetAsync(group.gID);
+
+                    if (groupDetails == null)
+                    {
+                        Console.WriteLine($"Group with gID {group.gID} not found.");
+                        continue;
+                    }
+
+                    // Retrieve availability details for the group
+                    var availabilityDetails = new List<object>();
+                    foreach (var aid in group.Availabilities)
+                    {
+                        var availability = await _availabilitiesService.GetAsync(aid);
+
+                        if (availability != null)
+                        {
+                            availabilityDetails.Add(availability);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Availability with ID {aid} not found.");
+                        }
+                    }
+
+                    // Add the enriched group data to the response
+                    groupData.Add(new
+                    {
+                        Group = groupDetails,
+                        Availabilities = availabilityDetails
+                    });
+                }
+
+                return Ok(groupData);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error retrieving Groups: {ex.Message}\n{ex.StackTrace}");
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { Message = "An error occurred while retrieving groups." });
+            }
+        }
+
         [HttpGet("availability/{aid}")]
         public async Task<IActionResult> GetAvailability(string aid)
         {
@@ -160,6 +222,7 @@ namespace Project_A_Server.Controllers
                     throw new InvalidOperationException("Failed to create availability or set required properties.");
 
                 await _userAvailabilitiesService.AddAvailabilityAsync(insertedAvailability.UID, insertedAvailability.aID);
+                await _userGroupsService.AddAvailabilityAsync(insertedAvailability.UID, insertedAvailability.gID, insertedAvailability.aID);
                 await _groupAvailabilitiesService.AddAvailabilityAsync(insertedAvailability.gID, insertedAvailability.aID);
 
                 return CreatedAtAction(nameof(GetAvailability), new { insertedAvailability.aID }, insertedAvailability);

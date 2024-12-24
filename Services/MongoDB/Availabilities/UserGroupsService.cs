@@ -22,7 +22,7 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
 
             var groupAvailabilities = await _repository.GetByUIDAsync(uid);
 
-            return groupAvailabilities ?? throw new KeyNotFoundException($"No Availabilities found for UID: {uid}.");
+            return groupAvailabilities ?? throw new KeyNotFoundException($"No Groups found for UID: {uid}.");
         }
 
         public async Task<UserGroups> AddGroupAsync(string uid, string gid)
