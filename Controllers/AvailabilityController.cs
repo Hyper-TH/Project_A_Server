@@ -60,7 +60,47 @@ namespace Project_A_Server.Controllers
                 if (string.IsNullOrEmpty(uid))
                     return BadRequest("User ID cannot be null or empty.");
 
-                // Retrieve user's groups
+                var groups = await _userGroupsService.GetAllAsync(uid);
+
+                var groupData = new List<object>();
+
+                foreach (var group in groups.Groups)
+                {
+                    var groupDetails = await _groupsService.GetAsync(group.gID);
+
+                    if (groupDetails == null)
+                    {
+                        Console.WriteLine($"Group with gID {group.gID} not found.");
+                        continue;
+                    }
+
+
+                    groupData.Add(new
+                    {
+                        groupDetails.gID,
+                        name = groupDetails.Name
+                    });
+                }
+
+                return Ok(groupData);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error retrieving Groups: {ex.Message}\n{ex.StackTrace}");
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { Message = "An error occurred while retrieving groups." });
+            }
+        }
+
+        [HttpGet("groupAvailabilities/{uid}")]
+        public async Task<IActionResult> GetGroupAvailabilities(string uid)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(uid))
+                    return BadRequest("User ID cannot be null or empty.");
+
                 var userGroups = await _userGroupsService.GetAllAsync(uid);
 
                 if (userGroups == null)
@@ -70,7 +110,6 @@ namespace Project_A_Server.Controllers
 
                 foreach (var group in userGroups.Groups)
                 {
-                    // Retrieve detailed group info
                     var groupDetails = await _groupsService.GetAsync(group.gID);
 
                     if (groupDetails == null)
@@ -79,7 +118,6 @@ namespace Project_A_Server.Controllers
                         continue;
                     }
 
-                    // Retrieve availability details for the group
                     var availabilityDetails = new List<object>();
                     foreach (var aid in group.Availabilities)
                     {
@@ -95,7 +133,6 @@ namespace Project_A_Server.Controllers
                         }
                     }
 
-                    // Add the enriched group data to the response
                     groupData.Add(new
                     {
                         Group = groupDetails,
