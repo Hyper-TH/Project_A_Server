@@ -93,8 +93,8 @@ namespace Project_A_Server.Controllers
             }
         }
 
-        [HttpGet("groupAvailabilities/{uid}")]
-        public async Task<IActionResult> GetGroupAvailabilities(string uid)
+        [HttpGet("userGroups/{uid}")]
+        public async Task<IActionResult> GetUserGroupAvailabilities(string uid)
         {
             try
             {
@@ -141,6 +141,55 @@ namespace Project_A_Server.Controllers
                 }
 
                 return Ok(groupData);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error retrieving Groups: {ex.Message}\n{ex.StackTrace}");
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { Message = "An error occurred while retrieving groups." });
+            }
+        }
+
+        [HttpGet("groupAvailabilities/{gid}")]
+        public async Task<IActionResult> GetGroupAvailabilities(string gid)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(gid))
+                    return BadRequest("User ID cannot be null or empty.");
+
+                var group = await _groupAvailabilitiesService.GetAllAsync(gid);
+
+                if (group == null)
+                    return NotFound($"Group with ID '{gid}' was not found.");
+
+                var dateTimes = new List<object>();
+
+                foreach (var aid in group.Availabilities)
+                {
+                    var dateTime = await _availabilitiesService.GetAsync(aid);
+
+                    if (dateTime != null)
+                    {
+                        dateTimes.Add(new
+                        {
+                            dateTime.Date,
+                            dateTime.StartTime,
+                            dateTime.EndTime,
+                            dateTime.Timezone,
+
+                        });
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Availability with ID {aid} not found.");
+                    }
+                }
+
+                // Pass to util here
+
+                return Ok(dateTimes);
             }
             catch (Exception ex)
             {
