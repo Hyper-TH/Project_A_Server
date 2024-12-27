@@ -2,6 +2,7 @@
 using Project_A_Server.Services.Redis;
 using Project_A_Server.Services.MongoDB.Availabilities;
 using Project_A_Server.Models.Availabilities;
+using Project_A_Server.Utils;
 using Microsoft.AspNetCore.Authorization;
 
 // TODO: Reduce Boilerplating, collections that store id: [{}] have similar logic 
@@ -168,16 +169,16 @@ namespace Project_A_Server.Controllers
 
                 foreach (var aid in group.Availabilities)
                 {
-                    var dateTime = await _availabilitiesService.GetAsync(aid);
+                    var dt = await _availabilitiesService.GetAsync(aid);
 
-                    if (dateTime != null)
+                    if (dt != null)
                     {
                         dateTimes.Add(new
                         {
-                            dateTime.Date,
-                            dateTime.StartTime,
-                            dateTime.EndTime,
-                            dateTime.Timezone,
+                            dt.Date,
+                            dt.StartTime,
+                            dt.EndTime,
+                            dt.Timezone,
 
                         });
                     }
@@ -187,9 +188,9 @@ namespace Project_A_Server.Controllers
                     }
                 }
 
-                // Pass to util here
+                var groupAvailabilities = AvailabilityMapper.MapAvailabilities(dateTimes);
 
-                return Ok(dateTimes);
+                return Ok(groupAvailabilities);
             }
             catch (Exception ex)
             {
