@@ -66,34 +66,44 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
             return newData;
         }
 
-        public async Task AddUserToGroupAsync(string uid, string id)
+        public async Task AddUserToGroupAsync(string uid, string gid)
         {
+            if (gid == null)
+                throw new ArgumentNullException(nameof(gid), "Group ID can not be null.");
+
+            var cachedDocId = await _cache.GetCachedDocIdAsync(gid);
+
             var collection = _repository.GetCollection();
-            var filter = Builders<Group>.Filter.Eq(x => x.Id, id);
+            var filter = Builders<Group>.Filter.Eq(x => x.Id, cachedDocId);
             var update = Builders<Group>.Update.AddToSet(x => x.Users, uid);
 
             var result = await collection.UpdateOneAsync(filter, update);
 
             if (result.MatchedCount == 0)
-                throw new InvalidOperationException($"Group with object ID {id} not found.");
+                throw new InvalidOperationException($"Group with object ID {cachedDocId} not found.");
 
             if (result.ModifiedCount == 0)
-                Console.WriteLine($"User {uid} is already in the Group object ID {id}.");
+                Console.WriteLine($"User {uid} is already in the Group object ID {cachedDocId}.");
         }
 
-        public async Task RemoveUserFromGroupAsync(string uid, string id)
+        public async Task RemoveUserFromGroupAsync(string uid, string gid)
         {
+            if (gid == null)
+                throw new ArgumentNullException(nameof(gid), "Group ID can not be null.");
+
+            var cachedDocId = await _cache.GetCachedDocIdAsync(gid);
+
             var collection = _repository.GetCollection();
-            var filter = Builders<Group>.Filter.Eq(x => x.Id, id);
+            var filter = Builders<Group>.Filter.Eq(x => x.Id, cachedDocId);
             var update = Builders<Group>.Update.Pull(x => x.Users, uid);
 
             var result = await collection.UpdateOneAsync(filter, update);
 
             if (result.MatchedCount == 0)
-                throw new InvalidOperationException($"Group with object ID {id} not found.");
+                throw new InvalidOperationException($"Group with object ID {cachedDocId} not found.");
 
             if (result.ModifiedCount == 0)
-                Console.WriteLine($"User {uid} is not in the Group object ID {id}.");
+                Console.WriteLine($"User {uid} is not in the Group object ID {cachedDocId}.");
         }
 
     }

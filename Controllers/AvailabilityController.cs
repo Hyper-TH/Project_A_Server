@@ -4,6 +4,7 @@ using Project_A_Server.Services.MongoDB.Availabilities;
 using Project_A_Server.Models.Availabilities;
 using Project_A_Server.Utils;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Cryptography;
 
 // TODO: Reduce Boilerplating, collections that store id: [{}] have similar logic 
 namespace Project_A_Server.Controllers
@@ -78,8 +79,10 @@ namespace Project_A_Server.Controllers
 
                     groupData.Add(new
                     {
-                        groupDetails.gID,
-                        name = groupDetails.Name
+                        group.gID,
+                        groupDetails.Name,
+                        groupDetails.Organizer,
+                        groupDetails.Description,
                     });
                 }
 
@@ -150,6 +153,22 @@ namespace Project_A_Server.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError,
                     new { Message = "An error occurred while retrieving groups." });
             }
+        }
+
+        [HttpPut("group/{uid}/{gid}")]
+        public async Task<IActionResult> AddUserToGroup(string uid, string gid)
+        {
+            if (uid == null || gid == null)
+            {
+                var nullValue = uid == null ? nameof(uid) : nameof(gid);
+
+                throw new ArgumentNullException(nullValue, $"{nullValue} cannot be null.");
+            }
+
+            await _userGroupsService.AddGroupAsync(uid, gid);
+            await _groupsService.AddUserToGroupAsync(uid, gid);
+
+            return Ok(new { Message = "Registered group successfully" });
         }
 
         [HttpGet("groupAvailabilities/{gid}")]
@@ -223,14 +242,14 @@ namespace Project_A_Server.Controllers
 
         }
 
-        [HttpGet("availabilities/{uID}")]
-        public async Task<IActionResult> GetUserAvailabilities(string uID)
+        [HttpGet("availabilities/{uid}")]
+        public async Task<IActionResult> GetUserAvailabilities(string uid)
         {
             try
             {
-                var userAvailabilities = await _userAvailabilitiesService.GetAsync(uID);
+                var userAvailabilities = await _userAvailabilitiesService.GetAsync(uid);
                 if (userAvailabilities == null || userAvailabilities.Availabilities == null)
-                    return NotFound($"No availabilities found for user with UID: {uID}.");
+                    return NotFound($"No availabilities found for user with UID: {uid}.");
 
                 var availabilityDetails = new List<Availability>();
 
@@ -305,7 +324,7 @@ namespace Project_A_Server.Controllers
             try
             {
                 var insertedAvailability = await _availabilitiesService.CreateAsync(newAvailability);
-                if (insertedAvailability == null || string.IsNullOrEmpty(insertedAvailability.UID) || string.IsNullOrEmpty(insertedAvailability.aID))
+                if (string.IsNullOrEmpty(insertedAvailability.gID) || string.IsNullOrEmpty(insertedAvailability.UID) || string.IsNullOrEmpty(insertedAvailability.aID))
                     throw new InvalidOperationException("Failed to create availability or set required properties.");
 
                 await _userAvailabilitiesService.AddAvailabilityAsync(insertedAvailability.UID, insertedAvailability.aID);
