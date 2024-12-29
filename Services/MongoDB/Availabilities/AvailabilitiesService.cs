@@ -2,6 +2,7 @@
 using Project_A_Server.Models.Availabilities;
 using Project_A_Server.Services.Redis;
 using Project_A_Server.Utils;
+using System.Security.Cryptography;
 
 namespace Project_A_Server.Services.MongoDB.Availabilities
 {
@@ -66,7 +67,17 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
         public async Task UpdateAsync(string id, Availability updatedAvailability) =>
             await _repository.UpdateAsync(id, updatedAvailability);
 
-        public async Task RemoveAsync(string id) =>
-            await _repository.DeleteByObjectIdAsync(id);
+        public async Task RemoveAsync(string id)
+        {
+            if (id == null)
+                throw new ArgumentNullException(nameof(id), "Availability ID can not be null.");
+
+            var cachedDocId = await _cache.GetCachedDocIdAsync(id);
+
+            if (string.IsNullOrEmpty(cachedDocId))
+                throw new KeyNotFoundException($"Cached Doc ID for {id} not found");
+
+            await _repository.DeleteByObjectIdAsync(cachedDocId);
+        }
     }
 }

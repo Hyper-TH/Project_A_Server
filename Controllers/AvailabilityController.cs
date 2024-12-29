@@ -345,5 +345,27 @@ namespace Project_A_Server.Controllers
                     new { Message = "An error occured while creating the availability." });
             }
         }
+
+        [HttpDelete("availability/{uid}/{gid}/{aid}")]
+        public async Task<IActionResult> DeleteAvailability(string uid, string gid, string aid)
+        {
+            try
+            {
+                await _availabilitiesService.RemoveAsync(aid);
+                await _userAvailabilitiesService.RemoveAvailabilityAsync(uid, aid);
+                await _groupAvailabilitiesService.RemoveAvailabilityAsync(gid, aid);
+                await _cache.RemoveCachedIDAsync(aid);
+
+                return Ok(new { Message = "Availability removed successfully." });
+
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error deleting Availability : {ex.Message}", ex);
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { Message = "An error occured while deleting the availability." });
+            }
+        }
     }
 }
