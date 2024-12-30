@@ -66,6 +66,19 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
             return newData;
         }
 
+        public async Task RemoveAsync(string gid)
+        {
+            if(gid == null)
+                throw new ArgumentNullException(nameof(gid), "Group ID can not be null.");
+
+            var cachedDocId = await _cache.GetCachedDocIdAsync(gid);
+
+            if (string.IsNullOrEmpty(cachedDocId))
+                throw new KeyNotFoundException($"Cached Doc ID for {gid} not found");
+
+            await _repository.DeleteByObjectIdAsync(cachedDocId);
+        }
+
         public async Task AddUserToGroupAsync(string uid, string gid)
         {
             if (gid == null)

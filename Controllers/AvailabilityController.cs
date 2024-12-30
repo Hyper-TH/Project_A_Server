@@ -19,11 +19,12 @@ namespace Project_A_Server.Controllers
         private readonly GroupAvailabilitiesService _groupAvailabilitiesService;
         private readonly UserGroupsService _userGroupsService;
         private readonly RedisService _cache;
+        private readonly RemoveGroup _removeGroup;
 
         public AvailabilityController(
             AvailabilitiesService availabilities, UserAvailabilitiesService userAvailabilities,
             GroupAvailabilitiesService groupAvailabilities, GroupsService groups, 
-            UserGroupsService userGroups, RedisService cache)
+            UserGroupsService userGroups, RedisService cache, RemoveGroup removeGroup)
         {
             _availabilitiesService = availabilities;
             _groupsService = groups;
@@ -31,6 +32,7 @@ namespace Project_A_Server.Controllers
             _userAvailabilitiesService = userAvailabilities;
             _userGroupsService = userGroups;
             _cache = cache;
+            _removeGroup = removeGroup;
         }
 
         [HttpGet("group/{gid}")]
@@ -165,10 +167,20 @@ namespace Project_A_Server.Controllers
                 throw new ArgumentNullException(nullValue, $"{nullValue} cannot be null.");
             }
 
-            await _userGroupsService.AddGroupAsync(uid, gid);
-            await _groupsService.AddUserToGroupAsync(uid, gid);
+            try
+            {
+                await _groupsService.AddUserToGroupAsync(uid, gid);
+                await _userGroupsService.AddGroupAsync(uid, gid);
 
-            return Ok(new { Message = "Registered group successfully" });
+                return Ok(new { Message = "Registered group successfully" });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error creating Group: {ex.Message}", ex);
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { Message = "An error occurred while creating the group." });
+            }
         }
 
         [HttpGet("groupAvailabilities/{gid}")]
@@ -315,6 +327,28 @@ namespace Project_A_Server.Controllers
 
                 return StatusCode(StatusCodes.Status500InternalServerError,
                     new { Message = "An error occurred while creating the group." });
+            }
+        }
+        
+        [HttpDelete("group/{gid}")]
+        public async Task<IActionResult> DeleteGroup(string gid)
+        {
+            // TODO: UserAvailabilities might become redundant
+            // because of the new structure of UserGroups (check mongoDB)
+            try
+            {
+                await _removeGroup.DeleteGroupAsync(gid);
+                await _groupsService.RemoveAsync(gid);
+                await _cache.RemoveCachedIDAsync(gid);
+
+                return Ok(new { Message = "Group removed successfully." });
+            }
+            catch (Exception ex) 
+            {
+                Console.Error.WriteLine($"Error deleting Group: {ex.Message}", ex);
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { Message = "An error occurred while deleting the Group." });
             }
         }
 

@@ -50,6 +50,24 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
                    ?? throw new InvalidOperationException($"Failed to retrieve user groups for UID: {uid}.");
         }
 
+        public async Task<UserGroups> RemoveGroupAsync(string uid, string gid)
+        {
+            var collection = _repository.GetCollection();
+            var filter = Builders<UserGroups>.Filter.Eq(x => x.UID, uid);
+            var update = Builders<UserGroups>.Update.PullFilter(x => x.Groups, group => group.gID == gid);
+
+            var result = await collection.UpdateOneAsync(filter, update);
+
+            if (result.MatchedCount == 0)
+                throw new KeyNotFoundException($"No user with UID {uid} found.");
+
+            if (result.ModifiedCount == 0)
+                Console.WriteLine($"Group with gID {gid} already exists for user {uid}.");
+
+            return await _repository.GetByUIDAsync(uid)
+                   ?? throw new InvalidOperationException($"Failed to retrieve user groups for UID: {uid}.");
+        }
+
         public async Task AddAvailabilityAsync(string uid, string gid, string aid)
         {
             if (string.IsNullOrEmpty(uid) || string.IsNullOrEmpty(gid) || string.IsNullOrEmpty(aid))

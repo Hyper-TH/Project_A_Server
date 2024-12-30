@@ -34,6 +34,9 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
             return groupAvailabilities ?? throw new KeyNotFoundException($"No Availabilities found for GID: {gid}.");
         }
 
+        public async Task RemoveAsync(string gid) =>
+            await _repository.DeleteAsync(gid);
+
         public async Task AddAvailabilityAsync(string gid, string aid)
         {
             if (gid == null || aid == null)
