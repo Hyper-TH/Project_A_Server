@@ -30,6 +30,7 @@ builder.Services.AddScoped<MeetingsService>();
 builder.Services.AddScoped<AttendeesService>();
 builder.Services.AddScoped<UserMeetingsService>();
 builder.Services.AddScoped<UnregisterUsers>();
+builder.Services.AddScoped<RemoveGroup>();
 builder.Services.AddScoped<UserAvailabilitiesService>();
 builder.Services.AddScoped<UserGroupsService>();
 builder.Services.AddScoped<AvailabilitiesService>();
