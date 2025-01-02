@@ -207,8 +207,8 @@ namespace Project_A_Server.Controllers
                         dateTimes.Add(new
                         {
                             dt.Date,
-                            dt.StartTime,
-                            dt.EndTime,
+                            dt.Start,
+                            dt.End,
                             dt.Timezone,
 
                         });
