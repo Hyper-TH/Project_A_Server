@@ -21,11 +21,11 @@ namespace Project_A_Server.Models.Availabilities
         [BsonElement("DateTime")]
         public DateTime Date { get; set; }
 
-        [BsonElement("StartTime")]
-        public string StartTime { get; set; } = null!;
+        [BsonElement("Start")]
+        public string Start { get; set; } = null!;
 
-        [BsonElement("EndTime")]
-        public string EndTime { get; set; } = null!;
+        [BsonElement("End")]
+        public string End { get; set; } = null!;
 
         [BsonElement("Timezone")]
         public string Timezone { get; set; } = null!;

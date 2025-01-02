@@ -23,9 +23,11 @@ namespace Project_A_Server.Models.Meetings
         [BsonElement("Description")]
         public string Description { get; set; } = null!;
 
-        [BsonElement("DateTime")]
-        [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
-        public DateTime DateTime { get; set; }
+        [BsonElement("Start")]
+        public string Start { get; set; } = null!;
+
+        [BsonElement("End")]
+        public string End { get; set; } = null!;
 
         [BsonElement("Timezone")]
         public string Timezone { get; set; } = null!;
