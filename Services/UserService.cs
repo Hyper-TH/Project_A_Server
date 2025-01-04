@@ -40,6 +40,8 @@ namespace Project_A_Server.Services
             _cache = projectARedisService;
         }
 
+        // TODO: If user does not exist, throw an error
+
         public async Task<User> GetByUsernameAsync(string username)
         {
             var user = await _repository.GetByUsernameAsync(username);

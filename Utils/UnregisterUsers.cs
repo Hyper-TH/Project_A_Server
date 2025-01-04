@@ -23,12 +23,8 @@ namespace Project_A_Server.Utils
 
         public async Task UnregisterMeetingAsync(string mID)
         {
-            var meeting = await _attendeesService.GetAsync(mID);
-            if (meeting == null)
-            {
-                throw new InvalidOperationException($"Meeting {mID} not found.");
-            }
-
+            var meeting = await _attendeesService.GetAsync(mID) ?? throw new InvalidOperationException($"Meeting {mID} not found.");
+            
             await UnregisterRecursively(mID, meeting.Users.ToList());
         }
 
