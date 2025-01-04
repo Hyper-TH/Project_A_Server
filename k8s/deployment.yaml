@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-a-server
+  labels:
+    app: project-a-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: project-a-server
+  template:
+    metadata:
+      labels:
+        app: project-a-server
+    spec:
+      containers:
+      - name: project-a-server
+        image: twila/project_a_server:latest 
+        ports:
+        - containerPort: 80
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project-a-server
+spec:
+  type: LoadBalancer
+  selector:
+    app: project-a-server
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80

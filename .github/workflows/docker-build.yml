@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build, Push, and Deploy to Kubernetes
 
 on:
   push:
@@ -33,3 +33,31 @@ jobs:
 
       - name: Push Latest Docker Image
         run: docker push twila/project_a_server:latest
+
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      # Checkout the repository code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      # Authenticate kubectl to your cluster
+      - name: Set Kubernetes Context
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+
+      # Apply Kubernetes manifests
+      - name: Deploy to Kubernetes
+        run: kubectl apply -f k8s/deployment.yaml
