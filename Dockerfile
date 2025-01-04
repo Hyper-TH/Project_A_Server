@@ -5,10 +5,13 @@ WORKDIR /app
 # Use the SDK image for build
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
+
+# Copy the project file and restore dependencies
 COPY ["Project_A_Server.csproj", "./"]
 RUN dotnet restore "./Project_A_Server.csproj"
+
+# Copy the rest of the application files
 COPY . .
-WORKDIR "/src"
 RUN dotnet publish "./Project_A_Server.csproj" -c Release -o /app/publish
 
 # Use the runtime image for the final output
