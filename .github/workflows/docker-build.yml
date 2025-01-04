@@ -58,6 +58,11 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
 
-      # Apply Kubernetes manifests
+      # Inject environment variables and deploy Kubernetes manifests
       - name: Deploy to Kubernetes
-        run: kubectl apply -f k8s/deployment.yaml
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          UPSTASH_REDIS_TOKEN: ${{ secrets.UPSTASH_REDIS_TOKEN }}
+        run: |
+          envsubst < k8s/deployment-template.yaml > k8s/deployment.yaml
+          kubectl apply -f k8s/deployment.yaml
