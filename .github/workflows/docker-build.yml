@@ -21,7 +21,7 @@ jobs:
 
       # Build the Docker image
       - name: Build Docker Image
-        run: docker build -t twila/project_a_server:${{ github.sha }} .
+        run: docker build -t twila/project_a_server:${{ github.sha }} ./Project_A_Server
 
       # Tag the image as latest
       - name: Tag Docker Image as Latest
