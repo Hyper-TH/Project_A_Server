@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-a-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project-a-server
+  template:
+    metadata:
+      labels:
+        app: project-a-server
+    spec:
+      containers:
+      - name: project-a-server
+        image: twila/project_a_server:${{ github.sha }}
+        ports:
+        - containerPort: 80
+        env:
+        - name: REDIS_URL
+          value: "${REDIS_URL}"
+        - name: UPSTASH_REDIS_TOKEN
+          value: "${UPSTASH_REDIS_TOKEN}"
+        - name: JWT_SECRET_KEY
+          value: "${JWT_SECRET_KEY}"
