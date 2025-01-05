@@ -1,5 +1,6 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 
+// TODO: Color logic
 namespace Project_A_Server.Models.Availabilities
 {
     public class UserGroups
@@ -15,6 +16,9 @@ namespace Project_A_Server.Models.Availabilities
         {
             [BsonElement("gID")]
             public string gID { get; set; } = string.Empty;
+
+            [BsonElement("Color")]
+            public string color { get; set; } = string.Empty;
 
             [BsonElement("Availabilities")]
             public string[] Availabilities { get; set; } = [];

@@ -11,6 +11,18 @@ namespace Project_A_Server.Utils
 
             var result = new List<object>();
 
+            /*
+             * TODO: Follow this JSON
+             * {
+             *  id,
+             *  title,
+             *  start,
+             *  end,
+             *  timezone, 
+             *  color (modify group model)
+             * }
+             */
+
             foreach (var group in groupedByDate)
             {
                 var times = new List<object>();

@@ -1,6 +1,7 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
+// TODO: Modify Users[] to have it as [{id, color},{..}]
 namespace Project_A_Server.Models.Availabilities
 {
     public class Group

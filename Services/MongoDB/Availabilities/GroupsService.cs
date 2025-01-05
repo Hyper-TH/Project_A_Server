@@ -79,6 +79,7 @@ namespace Project_A_Server.Services.MongoDB.Availabilities
             await _repository.DeleteByObjectIdAsync(cachedDocId);
         }
 
+        // TODO: Modify these methods to accommodate for color
         public async Task AddUserToGroupAsync(string uid, string gid)
         {
             if (gid == null)
